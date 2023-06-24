@@ -8,11 +8,13 @@ m_serv_sock{ ss.m_serv_sock }, m_client{ ss.m_client }
 
 CServerSocket::CServerSocket()
 {
+	m_client = INVALID_SOCKET;
 	if (InitSockEnv() == FALSE)
 	{
 		MessageBox(NULL, _T("≥ı ºªØWinSockø‚ ß∞‹£°"), _T("¥ÌŒÛ"), MB_OK | MB_ICONERROR);
 		exit(0);
 	}
+	m_serv_sock = socket(PF_INET, SOCK_STREAM, 0);
 }
 
 CServerSocket::~CServerSocket()
@@ -29,7 +31,7 @@ BOOL CServerSocket::InitSockEnv()
 		return FALSE;
 	}
 	return TRUE;
-	m_serv_sock = socket(PF_INET, SOCK_STREAM, 0);
+	
 }
 void CServerSocket::releaseInstance()
 {
