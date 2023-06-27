@@ -6,6 +6,8 @@
 #include "RemoteCtrl.h"
 #include "CServerSocket.h"
 #include <direct.h>
+#include <io.h>
+#include <list>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -51,12 +53,68 @@ int makeDriverInfo() {
 	//CServerSocket::getInstance()->sendCom(pack);
 	return 0;
 }
+
+typedef struct file_info {
+	file_info() {
+		isInvalid = 0;
+		isDirectory = 0;
+		hasNext = TRUE;
+		memset(szFileName, 0, sizeof(szFileName));
+	}
+	BOOL isInvalid;//是否有效 1无效
+	BOOL isDirectory;//是否为目录 1是
+	BOOL hasNext;//是否有后续  1有
+	char szFileName[256];//文件名
+}FILEINFO,*PFILEINFO;
+
+int makeDirectoryInfo() {
+	std::string strPath;
+	//std::list<FILEINFO> lstFileInfos;
+	if (gpServer->getFilePath(strPath)==false)
+	{
+		OutputDebugString(_T("当前的命令，不是获取文件列表，命令错误!"));
+		return -1;
+	}
+	if (!_chdir(strPath.c_str()))
+	{
+		FILEINFO finfo;
+		finfo.isInvalid = TRUE;
+		finfo.isDirectory = TRUE;
+		finfo.hasNext = FALSE;
+		memcpy(finfo.szFileName, strPath.c_str(), strPath.size());
+		//lstFileInfos.push_back(finfo);
+		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+		gpServer->sendCom(pack);
+		OutputDebugString(_T("没有权限访问目录!"));
+		return -2;
+	}
+	_finddata_t fdata;
+	int hFind = 0;
+	if ((hFind=_findfirst("*",&fdata))==-1)
+	{
+		OutputDebugString(_T("没有找到任何文件!"));
+		return -3;
+	}
+	do
+	{
+		FILEINFO finfo;
+		finfo.isDirectory = (fdata.attrib & _A_SUBDIR) != 0;//比较文件类型是否是文件夹 attrib
+		memcpy(finfo.szFileName, fdata.name, strlen(fdata.name));
+		//lstFileInfos.push_back(finfo);
+		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+		gpServer->sendCom(pack);
+	} while (!_findnext(hFind,&fdata));
+	//发送信息到控制端
+	FILEINFO finfo;
+	finfo.hasNext = FALSE;
+	CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+	gpServer->sendCom(pack);
+	return 0;
+}
 int main()
 {
 	int nRetCode = 0;
-
 	HMODULE hModule = ::GetModuleHandle(nullptr);
-
 	if (hModule != nullptr)
 	{
 		// 初始化 MFC 并在失败时显示错误
@@ -93,6 +151,9 @@ int main()
 			{
 			case 1://查看磁盘分区
 				makeDriverInfo();
+				break;
+			case 2://查看指定目录下的文件
+				makeDirectoryInfo();
 				break;
 			default:
 				break;

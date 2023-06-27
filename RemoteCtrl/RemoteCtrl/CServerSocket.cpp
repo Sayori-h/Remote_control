@@ -32,7 +32,7 @@ BOOL CServerSocket::InitSockEnv()
 		return FALSE;
 	}
 	return TRUE;
-	
+
 }
 void CServerSocket::releaseInstance()
 {
@@ -70,7 +70,7 @@ bool CServerSocket::acceptCli()
 int CServerSocket::dealCommand()
 {
 	if (m_client == -1)return false;
-	char*buffer = new char[BUF_SIZE];
+	char* buffer = new char[BUF_SIZE];
 	memset(buffer, 0, BUF_SIZE);
 	size_t index = 0;
 	while (true)
@@ -83,7 +83,7 @@ int CServerSocket::dealCommand()
 		//TODO:处理命令
 		index += len;
 		m_packet = CPacket((BYTE*)buffer, len);
-		if (len>0)
+		if (len > 0)
 		{
 			memmove(buffer, buffer + len, BUF_SIZE - len);
 			index -= len;
@@ -100,7 +100,7 @@ bool CServerSocket::sendCom(const char* pData, int size)
 bool CServerSocket::sendCom(CPacket& pack)
 {
 	if (m_client == -1)return false;
-	return send(m_client, pack.pacData(), pack.pacSize(), 0)>0;
+	return send(m_client, pack.pacData(), pack.pacSize(), 0) > 0;
 }
 CServerSocket* CServerSocket::getInstance()
 {
@@ -109,6 +109,15 @@ CServerSocket* CServerSocket::getInstance()
 		m_instance = new CServerSocket();
 	}
 	return m_instance;
+}
+bool CServerSocket::getFilePath(std::string& strPath)
+{
+	if (m_packet.sCmd == 2)//获取文件列表
+	{
+		strPath = m_packet.strData;
+		return true;
+	}
+	return false;
 }
 class CServerSocket::CNewAndDel {
 public:
@@ -133,7 +142,7 @@ CPacket::CPacket() :sHead(0), nLength(0), sCmd(0), sSum(0) {}
 
 CPacket& CPacket::operator=(const CPacket& pack)
 {
-	if (this!=&pack)
+	if (this != &pack)
 	{
 		sHead = pack.sHead;
 		nLength = pack.nLength;
@@ -158,34 +167,34 @@ CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize)
 	}
 }
 
-CPacket::CPacket(const BYTE* pData, size_t& nSize):sHead(0), nLength(0), sCmd(0), sSum(0)
+CPacket::CPacket(const BYTE* pData, size_t& nSize) :sHead(0), nLength(0), sCmd(0), sSum(0)
 {
 	size_t i = 0;
 	for (; i < nSize; i++)
 	{
-		if (*(WORD*)(pData + i)==0xFFEF) {
+		if (*(WORD*)(pData + i) == 0xFFEF) {
 			sHead = *(WORD*)(pData + i);//?
 			i += 2;
 			break;
 		}
 	}
-	if (i+4+2+2>nSize)
+	if (i + 4 + 2 + 2 > nSize)
 	{
 		nSize = 0;
 		return;
 	}
 	nLength = *(DWORD*)(pData + i);//?  nLength长度
 	i += 4;
-	if (nLength+i>nSize)
+	if (nLength + i > nSize)
 	{
 		nSize = 0;
 		return;
 	}
 	sCmd = *(WORD*)(pData + i);//?
 	i += 2;
-	if (nLength>4)
+	if (nLength > 4)
 	{
-		strData.resize(nLength - 2-2);
+		strData.resize(nLength - 2 - 2);
 		memcpy((void*)strData.c_str(), pData + i, nLength - 4);
 		i += nLength - 4;
 	}
@@ -212,7 +221,7 @@ CPacket::CPacket(const CPacket& pack)
 
 int CPacket::pacSize()
 {
-	return nLength+6;
+	return nLength + 6;
 }
 
 const char* CPacket::pacData()

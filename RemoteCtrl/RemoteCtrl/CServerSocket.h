@@ -51,6 +51,7 @@ public:
 	bool sendCom(const char* pData, int size);
 	bool sendCom(CPacket& pData);
 	static CServerSocket* getInstance();
+	bool getFilePath(std::string& strPath);
 };
 
 extern CServerSocket* gpServer;
