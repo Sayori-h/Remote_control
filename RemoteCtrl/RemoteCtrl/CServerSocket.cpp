@@ -97,6 +97,11 @@ bool CServerSocket::sendCom(const char* pData, int size)
 	if (m_client == -1)return false;
 	return send(m_client, pData, size, 0) > 0;
 }
+bool CServerSocket::sendCom(CPacket& pack)
+{
+	if (m_client == -1)return false;
+	return send(m_client, pack.pacData(), pack.pacSize(), 0)>0;
+}
 CServerSocket* CServerSocket::getInstance()
 {
 	if (m_instance == NULL)
@@ -137,6 +142,20 @@ CPacket& CPacket::operator=(const CPacket& pack)
 		sSum = pack.sSum;
 	}
 	return *this;
+}
+
+CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize)
+{
+	sHead = 0xFEFF;
+	nLength = nSize + 4;
+	sCmd = nCmd;
+	strData.resize(nSize);
+	memcpy((void*)strData.c_str(), pData, nSize);
+	sSum = 0;
+	for (size_t j = 0; j < strData.size(); j++)
+	{
+		sSum += BYTE(strData[j]) & 0xFF;
+	}
 }
 
 CPacket::CPacket(const BYTE* pData, size_t& nSize):sHead(0), nLength(0), sCmd(0), sSum(0)
@@ -180,4 +199,30 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize):sHead(0), nLength(0), sCmd(0)
 		nSize = nLength + 2 + 4;
 		return;
 	}
+}
+
+CPacket::CPacket(const CPacket& pack)
+{
+	sHead = pack.sHead;
+	nLength = pack.nLength;
+	sCmd = pack.sCmd;
+	strData = pack.strData;
+	sSum = pack.sSum;
+}
+
+int CPacket::pacSize()
+{
+	return nLength+6;
+}
+
+const char* CPacket::pacData()
+{
+	strOut.resize(nLength + 6);
+	BYTE* pData = (BYTE*)strOut.c_str();
+	*(WORD*)pData = sHead; pData += 2;
+	*(DWORD*)pData = nLength; pData += 4;
+	*(WORD*)pData = sCmd; pData += 2;
+	memcpy(pData, strData.c_str(), strData.size()); pData += strData.size();
+	*(WORD*)pData = sSum;
+	return strOut.c_str();
 }

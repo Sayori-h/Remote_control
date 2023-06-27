@@ -5,6 +5,7 @@
 #include "framework.h"
 #include "RemoteCtrl.h"
 #include "CServerSocket.h"
+#include <direct.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -15,8 +16,41 @@
 
 CWinApp theApp;
 
-using namespace std;
+void dump(BYTE* pData, size_t nSize) {//?
+	std::string strOut;
+	for (size_t i = 0; i < nSize; i++)
+	{
+		char buf[16] = "";
+		if (i>0&&(i%16==0))
+		{
+			strOut += "\n";
+		}
+		snprintf(buf, sizeof(buf), "%02X ", pData[i]&0xFF );
+		strOut += buf;
+	}
+	strOut += "\n";
+	OutputDebugStringA(strOut.c_str());
+}
 
+int makeDriverInfo() {
+	std::string res;
+	for (int i = 1; i <= 26; i++)
+	{
+		if (!_chdrive(i))
+		{
+			if (res.size())
+			{
+				res += ',';
+			}
+			res += 'A' + i - 1;
+		}
+	}
+	CPacket pack(1, (BYTE*)res.c_str(), res.size());//打包用的
+	//dump((BYTE*)&pack, pack.nLength + 6);//原来误把strData的地址导出
+	dump((BYTE*)pack.pacData(), pack.pacSize());
+	//CServerSocket::getInstance()->sendCom(pack);
+	return 0;
+}
 int main()
 {
 	int nRetCode = 0;
@@ -34,7 +68,7 @@ int main()
 		}
 		else
 		{
-			int count = 0;
+			/*int count = 0;
 			if (gpServer->initSocket() == false)
 			{
 				MessageBox(NULL, _T("网络初始化失败"), _T("错误"), MB_OK | MB_ICONERROR);
@@ -52,7 +86,16 @@ int main()
 					count++;
 				}
 				int ret = gpServer->dealCommand();
-				//TODO:处理命令
+				TODO:处理命令
+			}*/
+			int nCmd = 1;
+			switch (nCmd)
+			{
+			case 1://查看磁盘分区
+				makeDriverInfo();
+				break;
+			default:
+				break;
 			}
 		}
 	}

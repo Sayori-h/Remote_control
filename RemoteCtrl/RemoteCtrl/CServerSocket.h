@@ -3,6 +3,8 @@
 #include "framework.h"
 #include <string>
 
+#pragma pack(push)
+#pragma pack(1)
 class CPacket 
 {
 private:
@@ -12,11 +14,17 @@ public:
 	WORD sCmd;//控制命令
 	std::string strData;//包的数据
 	WORD sSum;//和校验
+	std::string strOut;//整个包的数据
 	CPacket();
 	CPacket& operator=(const CPacket& pack);
 	~CPacket() {};
+	CPacket(WORD sCmd,const BYTE* pData, size_t nSize);
 	CPacket(const BYTE* pData, size_t& nSize);
+	CPacket(const CPacket& pack);
+	int pacSize();//包数据的大小
+	const char* pacData();//包的数据的内容
 };
+#pragma pack(pop)
 
 class CServerSocket
 {
@@ -41,6 +49,7 @@ public:
 	bool acceptCli();
 	int dealCommand();
 	bool sendCom(const char* pData, int size);
+	bool sendCom(CPacket& pData);
 	static CServerSocket* getInstance();
 };
 
