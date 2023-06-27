@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "CServerSocket.h"
+#define BUF_SIZE 4096
 
 CServerSocket::CServerSocket(const CServerSocket& ss) :\
 m_serv_sock{ ss.m_serv_sock }, m_client{ ss.m_client }
@@ -69,17 +70,27 @@ bool CServerSocket::acceptCli()
 int CServerSocket::dealCommand()
 {
 	if (m_client == -1)return false;
-	char buffer[1024] = "";
+	char*buffer = new char[BUF_SIZE];
+	memset(buffer, 0, BUF_SIZE);
+	size_t index = 0;
 	while (true)
 	{
-		int len = recv(m_client, buffer, sizeof(buffer), 0);
+		size_t len = recv(m_client, buffer, sizeof(buffer), 0);
 		if (len <= 0)
 		{
 			return -1;
 		}
 		//TODO:处理命令
+		index += len;
+		m_packet = CPacket((BYTE*)buffer, len);
+		if (len>0)
+		{
+			memmove(buffer, buffer + len, BUF_SIZE - len);
+			index -= len;
+			return m_packet.sCmd;
+		}
 	}
-	return 0;
+	return -1;
 }
 bool CServerSocket::sendCom(const char* pData, int size)
 {
@@ -113,4 +124,60 @@ CServerSocket* gpServer = CServerSocket::getInstance();
 CServerSocket::CNewAndDel CServerSocket::m_newdel;
 
 
+CPacket::CPacket() :sHead(0), nLength(0), sCmd(0), sSum(0) {}
 
+CPacket& CPacket::operator=(const CPacket& pack)
+{
+	if (this!=&pack)
+	{
+		sHead = pack.sHead;
+		nLength = pack.nLength;
+		sCmd = pack.sCmd;
+		strData = pack.strData;
+		sSum = pack.sSum;
+	}
+	return *this;
+}
+
+CPacket::CPacket(const BYTE* pData, size_t& nSize):sHead(0), nLength(0), sCmd(0), sSum(0)
+{
+	size_t i = 0;
+	for (; i < nSize; i++)
+	{
+		if (*(WORD*)(pData + i)==0xFFEF) {
+			sHead = *(WORD*)(pData + i);//?
+			i += 2;
+			break;
+		}
+	}
+	if (i+4+2+2>nSize)
+	{
+		nSize = 0;
+		return;
+	}
+	nLength = *(DWORD*)(pData + i);//?  nLength长度
+	i += 4;
+	if (nLength+i>nSize)
+	{
+		nSize = 0;
+		return;
+	}
+	sCmd = *(WORD*)(pData + i);//?
+	i += 2;
+	if (nLength>4)
+	{
+		strData.resize(nLength - 2-2);
+		memcpy((void*)strData.c_str(), pData + i, nLength - 4);
+		i += nLength - 4;
+	}
+	sSum = *(WORD*)(pData + i);
+	WORD sum = 0;
+	for (size_t j = 0; j < strData.size(); j++)
+	{
+		sum += BYTE(strData[i]) && 0xFF;//保持二进制补码的一致性，消除负数
+	}
+	if (sum == sSum) {
+		nSize = nLength + 2 + 4;
+		return;
+	}
+}
