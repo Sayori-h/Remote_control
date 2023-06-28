@@ -5,7 +5,7 @@
 
 #pragma pack(push)
 #pragma pack(1)
-class CPacket 
+class CPacket
 {
 private:
 public:
@@ -18,7 +18,7 @@ public:
 	CPacket();
 	CPacket& operator=(const CPacket& pack);
 	~CPacket() {};
-	CPacket(WORD sCmd,const BYTE* pData, size_t nSize);
+	CPacket(WORD sCmd, const BYTE* pData, size_t nSize);
 	CPacket(const BYTE* pData, size_t& nSize);
 	CPacket(const CPacket& pack);
 	int pacSize();//包数据的大小
@@ -52,7 +52,20 @@ public:
 	bool sendCom(CPacket& pData);
 	static CServerSocket* getInstance();
 	bool getFilePath(std::string& strPath);
+	bool getMouseEvent(MOUSEEV& mouse);
 };
 
 extern CServerSocket* gpServer;
+
+typedef struct MouseEvent {
+	MouseEvent() {
+		nAction = 0;
+		nButton = -1;//默认没效果
+		ptXY.x = 0;
+		ptXY.y = 0;
+	}
+	WORD nAction;//点击、移动、双击
+	WORD nButton;//左键、右键、中键
+	POINT ptXY;//坐标
+}MOUSEEV,*PMOUSEEV;
 

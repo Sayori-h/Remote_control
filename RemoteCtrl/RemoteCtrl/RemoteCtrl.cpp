@@ -149,6 +149,101 @@ int downLoadFile() {
 	fclose(pFile);
 	return 0;
 }
+
+int mouseEvent() {
+	MOUSEEV mouse;
+	if (gpServer->getMouseEvent(mouse))
+	{
+		//SetCursorPos(mouse.ptXY.x, mouse.ptXY.y);
+		DWORD nFlags = 0;
+		switch (mouse.nButton)
+		{
+		case 0://left
+			nFlags = 1;
+			break;
+		case 1://right
+			nFlags = 2;
+			break;
+		case 2://mid
+			nFlags = 4;
+			break;
+		case 3://only move,no click
+			nFlags = 8;
+			break;
+		default:
+			break;
+		}
+		if (nFlags != 8)SetCursorPos(mouse.ptXY.x, mouse.ptXY.y);
+		switch (mouse.nAction)
+		{
+		case 0://click
+			nFlags |= 0x10;
+			break;
+		case 1://double click
+			nFlags |= 0x20;
+			break;
+		case 2://down
+			nFlags |= 0x40;
+			break;
+		case 3://up
+			nFlags |= 0x80;
+			break;
+		default:
+			break;
+		}
+		switch (nFlags)//避免嵌套，把情况单独列出来
+		{
+		case 0x21://left double click
+			mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
+		case 0x11://left click
+			mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
+			break;
+		case 0x41://left down
+			mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
+			break;
+		case 0x81://left up
+			mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
+			break;
+		case 0x22://right double click
+			mouse_event(MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
+		case 0x12://right click
+			mouse_event(MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
+			break;
+		case 0x42://right down
+			mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, GetMessageExtraInfo());
+			break;
+		case 0x82://rigth up
+			mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
+			break;
+		case 0x14://mid click
+			mouse_event(MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
+			break;
+		case 0x24://mid Roll
+			mouse_event(MOUSEEVENTF_WHEEL, 0, 0, 0, GetMessageExtraInfo());
+			break;
+		case 0x44://mid down
+			mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
+			break;
+		case 0x84://mid up
+			mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
+			break;
+		case 0x08://only move,no click
+			mouse_event(MOUSEEVENTF_MOVE, mouse.ptXY.x, mouse.ptXY.y, 0, GetMessageExtraInfo());
+			break;
+		default:
+			break;
+		}
+		CPacket pack(5, NULL, 0);
+		gpServer->sendCom(pack);
+	}
+	else
+	{
+		OutputDebugString(_T("获取鼠标参数失败!!"));
+		return -1;
+	}
+	return 0;
+}
+
 int main()
 {
 	int nRetCode = 0;
@@ -198,6 +293,9 @@ int main()
 				break;
 			case 4://控制端下载文件
 				downLoadFile();
+				break;
+			case 5:
+				mouseEvent();
 				break;
 			default:
 				break;
