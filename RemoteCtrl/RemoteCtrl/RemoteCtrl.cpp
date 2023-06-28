@@ -111,6 +111,44 @@ int makeDirectoryInfo() {
 	gpServer->sendCom(pack);
 	return 0;
 }
+
+int runFile() {
+	std::string strPath;
+	gpServer->getFilePath(strPath);
+	ShellExecuteA(NULL, NULL, strPath.c_str(), NULL, NULL, SW_SHOWNORMAL);//等于双击打开文件
+	CPacket pack(3, NULL, 0);
+	gpServer->sendCom(pack);
+	return 0;
+}
+
+int downLoadFile() {
+	std::string strPath;
+	gpServer->getFilePath(strPath);
+	long long data = 0;
+	FILE* pFile = fopen(strPath.c_str(), "rb");
+	if (pFile==NULL)
+	{
+		CPacket pack(4, (BYTE*)&data, 8);
+		gpServer->sendCom(pack);
+		return -1;
+	}
+	fseek(pFile, 0, SEEK_END);
+	data = _ftelli64(pFile);
+	CPacket head(4, (BYTE*)&data, 8);//通过8个字节拿到文件的长度
+	fseek(pFile, 0, SEEK_SET);//恢复到文件头
+	char buffer[1024] = "";
+	size_t rlen = 0;
+	do
+	{
+		rlen = fread(buffer, 1, 1024, pFile);
+		CPacket pack(4, (BYTE*)buffer, rlen);//读1K发1K
+		gpServer->sendCom(pack);
+	} while (rlen>=1024);
+	CPacket pack(4, NULL, 0);//到头了，发送终止符
+	gpServer->sendCom(pack);
+	fclose(pFile);
+	return 0;
+}
 int main()
 {
 	int nRetCode = 0;
@@ -154,6 +192,12 @@ int main()
 				break;
 			case 2://查看指定目录下的文件
 				makeDirectoryInfo();
+				break;
+			case 3://打开文件
+				runFile();
+				break;
+			case 4://控制端下载文件
+				downLoadFile();
 				break;
 			default:
 				break;
