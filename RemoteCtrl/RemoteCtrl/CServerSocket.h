@@ -3,6 +3,18 @@
 #include "framework.h"
 #include <string>
 
+typedef struct MouseEvent {
+	MouseEvent() {
+		nAction = 0;
+		nButton = -1;//默认没效果
+		ptXY.x = 0;
+		ptXY.y = 0;
+	}
+	WORD nAction;//点击、移动、双击
+	WORD nButton;//左键、右键、中键
+	POINT ptXY;//坐标
+}MOUSEEV, * PMOUSEEV;
+
 #pragma pack(push)
 #pragma pack(1)
 class CPacket
@@ -57,15 +69,5 @@ public:
 
 extern CServerSocket* gpServer;
 
-typedef struct MouseEvent {
-	MouseEvent() {
-		nAction = 0;
-		nButton = -1;//默认没效果
-		ptXY.x = 0;
-		ptXY.y = 0;
-	}
-	WORD nAction;//点击、移动、双击
-	WORD nButton;//左键、右键、中键
-	POINT ptXY;//坐标
-}MOUSEEV,*PMOUSEEV;
+
 

@@ -8,6 +8,7 @@
 #include <direct.h>
 #include <io.h>
 #include <list>
+#include <atlimage.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -244,6 +245,36 @@ int mouseEvent() {
 	return 0;
 }
 
+int sendScreen() {
+	HDC hScreen = ::GetDC(NULL);
+	//?个字节表示一个像素; ARGB8888 32bit;RGB888 24bit;RGB 565 16bit;RGB 444;
+	int nBitPerPixel = GetDeviceCaps(hScreen, BITSPIXEL);
+	int nWidth = GetDeviceCaps(hScreen, HORZRES);
+	int nHeight = GetDeviceCaps(hScreen, VERTRES);
+	CImage screen;
+	screen.Create(nWidth, nHeight, nBitPerPixel);//为图像类创建与窗口DC相同大小的DC
+	BitBlt(screen.GetDC(), 0, 0, 1920, 1020/*跳过任务栏高度*/, hScreen, 0, 0, SRCCOPY);//将窗口DC图像复制到image
+	ReleaseDC(NULL, hScreen);//释放DC资源<=>GetDC
+	HGLOBAL hMen = GlobalAlloc(GMEM_MOVEABLE, 0);
+	if (hMen == NULL)return -1;
+	IStream* pStream = NULL;
+	HRESULT ret = CreateStreamOnHGlobal(hMen, TRUE, &pStream);
+	if (ret==S_OK)
+	{
+		screen.Save(_T("test2023"), Gdiplus::ImageFormatPNG);//保存为png格式图片文件,仅保存到文件夹，需要保存到内存
+		LARGE_INTEGER bg{ 0 };
+		pStream->Seek(bg, STREAM_SEEK_SET, NULL);
+		PBYTE pData = (PBYTE)GlobalLock(hMen);
+		size_t nSize = GlobalSize(hMen);
+		CPacket(6, pData, nSize);
+		GlobalUnlock(hMen);
+	}
+	pStream->Release();
+	GlobalFree(hMen);//<=>GlobalAlloc
+	screen.ReleaseDC();//释放DC<=>Creat
+	return 0;
+}
+
 int main()
 {
 	int nRetCode = 0;
@@ -294,9 +325,11 @@ int main()
 			case 4://控制端下载文件
 				downLoadFile();
 				break;
-			case 5:
+			case 5://鼠标操作
 				mouseEvent();
 				break;
+			case 6://发送屏幕的内容=>发送屏幕截图
+				sendScreen();
 			default:
 				break;
 			}
