@@ -2,7 +2,7 @@
 #include "ClientSocket.h"
 #define BUF_SIZE 4096
 
-std::string GetErrorInfo(int wsaErrorCode) {
+std::string GetErrInfo(int wsaErrorCode) {
 	LPVOID lpMsgBuf = NULL;
 	/*通过调用 FormatMessage 函数动态分配了一块内存来存储错误信息字符串。
 	如果不释放这块内存，每次调用 GetErrInfo 函数时都会产生新的内存分配，而旧的内存则得不到释放，造成内存泄漏。*/
@@ -17,19 +17,19 @@ std::string GetErrorInfo(int wsaErrorCode) {
 	return ret;
 }
 CClientSocket::CClientSocket(const CClientSocket& ss) :\
-m_sock{ ss.m_sock }, m_client{ ss.m_client }
+m_sock{ ss.m_sock }
 {
 }
 
 CClientSocket::CClientSocket()
 {
-	m_client = INVALID_SOCKET;
+	m_sock = INVALID_SOCKET;
 	if (InitSockEnv() == FALSE)
 	{
 		MessageBox(NULL, _T("初始化WinSock库失败！"), _T("错误"), MB_OK | MB_ICONERROR);
 		exit(0);
 	}
-	m_sock = socket(PF_INET, SOCK_STREAM, 0);
+	m_buffer.resize(BUF_SIZE);
 }
 
 CClientSocket::~CClientSocket()
@@ -57,17 +57,18 @@ void CClientSocket::releaseInstance()
 		delete tmp;
 	}
 }
-//_WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
 
 bool CClientSocket::initSocket(const std::string& strIPAddress)
 {
+	if (m_sock != INVALID_SOCKET)CloseSocket();
+	m_sock = socket(PF_INET, SOCK_STREAM, 0);
 	if (m_sock == -1)return false;
 	sockaddr_in serv_adr;
 	memset(&serv_adr, 0, sizeof(serv_adr));
 	serv_adr.sin_family = AF_INET;
 	serv_adr.sin_addr.s_addr = inet_addr(strIPAddress.c_str());
 	serv_adr.sin_port = htons(9527);
-	if (serv_adr.sin_addr.s_addr == INADDR_NONE);
+	if (serv_adr.sin_addr.s_addr == INADDR_NONE)
 	{
 		AfxMessageBox("无可用IP地址!");
 		return false;
@@ -76,36 +77,25 @@ bool CClientSocket::initSocket(const std::string& strIPAddress)
 	if (ret==-1)
 	{
 		AfxMessageBox("连接失败!");
-		TRACE("连接失败 %d %s\r\n", WSAGetLastError(),GetErrorInfo(WSAGetLastError()));
+		TRACE("连接失败 %d %s\r\n", WSAGetLastError(),GetErrInfo(WSAGetLastError()));
 		return false;
 	}
 	return true;
 }
-bool CClientSocket::acceptCli()
-{
-	sockaddr_in cli_adr;
-	int cli_sz = sizeof(cli_adr);
-	m_client = accept(m_sock, (sockaddr*)&cli_adr, &cli_sz);
-	if (m_client == -1)
-	{
-		return false;
-	}
-	return true;
-}
+
 int CClientSocket::dealCommand()
 {
-	if (m_client == -1)return false;
-	char* buffer = new char[BUF_SIZE];
+	if (m_sock == -1)return false;
+	char* buffer = m_buffer.data();
 	memset(buffer, 0, BUF_SIZE);
 	size_t index = 0;
 	while (true)
 	{
-		size_t len = recv(m_client, buffer, sizeof(buffer), 0);
+		size_t len = recv(m_sock, buffer+index, BUF_SIZE-index, 0);
 		if (len <= 0)
 		{
 			return -1;
 		}
-		//TODO:处理命令
 		index += len;
 		m_packet = CPacket((BYTE*)buffer, len);
 		if (len > 0)
@@ -117,15 +107,12 @@ int CClientSocket::dealCommand()
 	}
 	return -1;
 }
-bool CClientSocket::sendCom(const char* pData, int size)
-{
-	if (m_client == -1)return false;
-	return send(m_client, pData, size, 0) > 0;
-}
+
 bool CClientSocket::sendCom(CPacket& pack)
 {
-	if (m_client == -1)return false;
-	return send(m_client, pack.pacData(), pack.pacSize(), 0) > 0;
+	TRACE("m_sock=%d\r\n", m_sock);
+	if (m_sock == -1)return false;
+	return send(m_sock, pack.pacData(), pack.pacSize(), 0) > 0;
 }
 CClientSocket* CClientSocket::getInstance()
 {
@@ -151,6 +138,17 @@ bool CClientSocket::getMouseEvent(MOUSEEV& mouse) {
 
 	}
 	return false;
+}
+
+CPacket& CClientSocket::GetPacket()
+{
+	return m_packet;
+}
+
+void CClientSocket::CloseSocket()
+{
+	closesocket(m_sock);
+	m_sock = INVALID_SOCKET;
 }
 
 class CClientSocket::CNewAndDel {
@@ -212,7 +210,7 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize) :sHead(0), nLength(0), sCmd(0
 	size_t i = 0;
 	for (; i < nSize; i++)
 	{
-		if (*(WORD*)(pData + i) == 0xFFEF) {
+		if (*(WORD*)(pData + i) == 0xFEFF) {
 			sHead = *(WORD*)(pData + i);//?
 			i += 2;
 			break;

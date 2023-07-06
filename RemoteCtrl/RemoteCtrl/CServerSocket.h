@@ -65,6 +65,8 @@ public:
 	static CServerSocket* getInstance();
 	bool getFilePath(std::string& strPath);
 	bool getMouseEvent(MOUSEEV& mouse);
+	CPacket& GetPacket();
+	void CloseClient();
 };
 
 extern CServerSocket* gpServer;

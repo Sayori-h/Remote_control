@@ -3,6 +3,7 @@
 #include "pch.h"
 #include "framework.h"
 #include <string>
+#include <vector>
 
 typedef struct MouseEvent {
 	MouseEvent() {
@@ -53,18 +54,18 @@ private:
 	//≥…‘± Ù–‘
 	CPacket m_packet;
 	SOCKET m_sock;
-	SOCKET m_client;
 	static CClientSocket* m_instance;
 	static CNewAndDel m_newdel;
+	std::vector<char>m_buffer;
 public:
 	bool initSocket(const std::string& strIPAddress);
-	bool acceptCli();
 	int dealCommand();
-	bool sendCom(const char* pData, int size);
 	bool sendCom(CPacket& pData);
 	static CClientSocket* getInstance();
 	bool getFilePath(std::string& strPath);
 	bool getMouseEvent(MOUSEEV& mouse);
+	CPacket& GetPacket();
+	void CloseSocket();
 };
 
 extern CClientSocket* gpClient;

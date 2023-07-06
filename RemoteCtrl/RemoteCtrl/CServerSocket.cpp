@@ -43,6 +43,7 @@ void CServerSocket::releaseInstance()
 		delete tmp;
 	}
 }
+
 bool CServerSocket::initSocket()
 {
 	if (m_serv_sock == -1)return false;
@@ -51,8 +52,10 @@ bool CServerSocket::initSocket()
 	serv_adr.sin_family = AF_INET;
 	serv_adr.sin_addr.s_addr = htonl(INADDR_ANY);
 	serv_adr.sin_port = htons(9527);
-	if (bind(m_serv_sock, (sockaddr*)&serv_adr, sizeof(serv_adr)) == -1)
+	if (bind(m_serv_sock, (sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) {
+		TRACE("bind ERRORnum = %d\n", GetLastError());
 		return false;
+	}
 	if (listen(m_serv_sock, 1))return false;
 	return true;
 }
@@ -61,6 +64,7 @@ bool CServerSocket::acceptCli()
 	sockaddr_in cli_adr;
 	int cli_sz = sizeof(cli_adr);
 	m_client = accept(m_serv_sock, (sockaddr*)&cli_adr, &cli_sz);
+	TRACE("m_client=%d\r\n", m_client);
 	if (m_client == -1)
 	{
 		return false;
@@ -71,25 +75,33 @@ int CServerSocket::dealCommand()
 {
 	if (m_client == -1)return false;
 	char* buffer = new char[BUF_SIZE];
+	if (buffer==NULL)
+	{
+		TRACE("内存不足!");
+		return -2;
+	}
 	memset(buffer, 0, BUF_SIZE);
 	size_t index = 0;
 	while (true)
 	{
-		size_t len = recv(m_client, buffer, sizeof(buffer), 0);
+		size_t len = recv(m_client, buffer+index, BUF_SIZE-index, 0);
 		if (len <= 0)
 		{
+			delete[]buffer;
 			return -1;
 		}
-		//TODO:处理命令
+		TRACE("recv %d\r\n", len);
 		index += len;
 		m_packet = CPacket((BYTE*)buffer, len);
 		if (len > 0)
 		{
 			memmove(buffer, buffer + len, BUF_SIZE - len);
 			index -= len;
+			delete[]buffer;
 			return m_packet.sCmd;
 		}
 	}
+	delete[]buffer;
 	return -1;
 }
 bool CServerSocket::sendCom(const char* pData, int size)
@@ -126,6 +138,17 @@ bool CServerSocket::getMouseEvent(MOUSEEV& mouse){
 
 	}
 	return false;
+}
+
+CPacket& CServerSocket::GetPacket()
+{
+	return m_packet;
+}
+
+void CServerSocket::CloseClient()
+{
+	closesocket(m_client);
+	m_client = INVALID_SOCKET;
 }
 
 class CServerSocket::CNewAndDel {
@@ -187,7 +210,7 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize) :sHead(0), nLength(0), sCmd(0
 	size_t i = 0;
 	for (; i < nSize; i++)
 	{
-		if (*(WORD*)(pData + i) == 0xFFEF) {
+		if (*(WORD*)(pData + i) == 0xFEFF) {
 			sHead = *(WORD*)(pData + i);//?
 			i += 2;
 			break;

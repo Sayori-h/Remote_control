@@ -342,6 +342,47 @@ int UnLockMachine() {
 	return 0;
 }
 
+int TestConnect() {
+	CPacket pack(2001, NULL, 0);
+	bool ret=gpServer->sendCom(pack);
+	TRACE("send ret=%d\r\n",ret);
+	return 0;
+}
+
+int ExcuteCommand(int nCmd) {
+	int ret = 0;
+	switch (nCmd)
+	{
+	case 1://查看磁盘分区
+		ret=makeDriverInfo();
+		break;
+	case 2://查看指定目录下的文件
+		ret = makeDirectoryInfo();
+		break;
+	case 3://打开文件
+		ret = runFile();
+		break;
+	case 4://控制端下载文件
+		ret = downLoadFile();
+		break;
+	case 5://鼠标操作
+		ret = mouseEvent();
+		break;
+	case 6://发送屏幕的内容=>发送屏幕截图
+		ret = sendScreen();
+		break;
+	case 7://锁机
+		ret = LockMachine();
+		break;
+	case 8://解锁
+		ret = UnLockMachine();
+		break;
+	case 2001://测试连接
+		ret=TestConnect();
+	}
+	return ret;
+}
+
 int main()
 {
 	int nRetCode = 0;
@@ -357,7 +398,7 @@ int main()
 		}
 		else
 		{
-			/*int count = 0;
+			int count = 0;
 			if (gpServer->initSocket() == false)
 			{
 				MessageBox(NULL, _T("网络初始化失败"), _T("错误"), MB_OK | MB_ICONERROR);
@@ -374,45 +415,18 @@ int main()
 					MessageBox(NULL, _T("无法连接用户，自动重试"), _T("错误"), MB_OK | MB_ICONERROR);
 					count++;
 				}
+				TRACE("AcceptClient return true\r\n");
 				int ret = gpServer->dealCommand();
-				TODO:处理命令
-			}*/
-			int nCmd = 7;
-
-			switch (nCmd)
-			{
-			case 1://查看磁盘分区
-				makeDriverInfo();
-				break;
-			case 2://查看指定目录下的文件
-				makeDirectoryInfo();
-				break;
-			case 3://打开文件
-				runFile();
-				break;
-			case 4://控制端下载文件
-				downLoadFile();
-				break;
-			case 5://鼠标操作
-				mouseEvent();
-				break;
-			case 6://发送屏幕的内容=>发送屏幕截图
-				sendScreen();
-				break;
-			case 7://锁机
-				LockMachine();
-				break;
-			case 8://解锁
-				UnLockMachine();
-				break;
-			default:
-				break;
-			}
-			Sleep(5000);
-			UnLockMachine();
-			TRACE("m_hWnd = %08X\r\n", dlg.m_hWnd);
-			while (dlg.m_hWnd != NULL) {
-				Sleep(10);
+				TRACE("dealCommand ret %d\r\n", ret);
+				if (ret>0)
+				{
+					ret = ExcuteCommand(ret);
+					if (ret)
+					{
+						TRACE("执行命令失败:%d ret=%d\r\n", gpServer->GetPacket().sCmd, ret);
+					}
+					gpServer->CloseClient();
+				}
 			}
 		}
 	}
