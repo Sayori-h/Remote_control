@@ -112,7 +112,8 @@ bool CServerSocket::sendCom(const char* pData, int size)
 bool CServerSocket::sendCom(CPacket& pack)
 {
 	if (m_client == -1)return false;
-	return send(m_client, pack.pacData(), pack.pacSize(), 0) > 0;
+	int ret= send(m_client, pack.pacData(), pack.pacSize(), 0);
+	return ret > 0;
 }
 CServerSocket* CServerSocket::getInstance()
 {
@@ -270,6 +271,6 @@ const char* CPacket::pacData()
 	*(DWORD*)pData = nLength; pData += 4;
 	*(WORD*)pData = sCmd; pData += 2;
 	memcpy(pData, strData.c_str(), strData.size()); pData += strData.size();
-	*(WORD*)pData = sSum;
+	*(WORD*)pData = sSum; 
 	return strOut.c_str();
 }

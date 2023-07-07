@@ -58,7 +58,7 @@ private:
 	static CNewAndDel m_newdel;
 	std::vector<char>m_buffer;
 public:
-	bool initSocket(const std::string& strIPAddress);
+	bool initSocket(int nIP, int nPort);
 	int dealCommand();
 	bool sendCom(CPacket& pData);
 	static CClientSocket* getInstance();

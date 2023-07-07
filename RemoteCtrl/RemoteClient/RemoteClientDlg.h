@@ -17,8 +17,11 @@ public:
 	enum { IDD = IDD_REMOTECLIENT_DIALOG };
 #endif
 
-	protected:
+protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
+
+private:
+	int SendCommandPacket(int nCmd, BYTE* pData = NULL, size_t nLength = 0);
 
 
 // 实现
@@ -33,4 +36,10 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnBnClickedBtnTest();
+	// 端口号
+	CString m_nPort;
+	DWORD m_server_address;
+	afx_msg void OnBnClickedBtnFileinfo();
+	// 对方的文件目录
+	CTreeCtrl m_Tree;
 };

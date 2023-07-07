@@ -52,7 +52,7 @@ int makeDriverInfo() {
 	CPacket pack(1, (BYTE*)res.c_str(), res.size());//打包用的
 	//dump((BYTE*)&pack, pack.nLength + 6);//原来误把strData的地址导出
 	dump((BYTE*)pack.pacData(), pack.pacSize());
-	//CServerSocket::getInstance()->sendCom(pack);
+	gpServer->sendCom(pack);
 	return 0;
 }
 

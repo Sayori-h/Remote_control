@@ -58,7 +58,7 @@ void CClientSocket::releaseInstance()
 	}
 }
 
-bool CClientSocket::initSocket(const std::string& strIPAddress)
+bool CClientSocket::initSocket(int nIP,int nPort)
 {
 	if (m_sock != INVALID_SOCKET)CloseSocket();
 	m_sock = socket(PF_INET, SOCK_STREAM, 0);
@@ -66,8 +66,8 @@ bool CClientSocket::initSocket(const std::string& strIPAddress)
 	sockaddr_in serv_adr;
 	memset(&serv_adr, 0, sizeof(serv_adr));
 	serv_adr.sin_family = AF_INET;
-	serv_adr.sin_addr.s_addr = inet_addr(strIPAddress.c_str());
-	serv_adr.sin_port = htons(9527);
+	serv_adr.sin_addr.s_addr = htonl(nIP);
+	serv_adr.sin_port = htons(nPort);
 	if (serv_adr.sin_addr.s_addr == INADDR_NONE)
 	{
 		AfxMessageBox("无可用IP地址!");
@@ -240,7 +240,7 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize) :sHead(0), nLength(0), sCmd(0
 	WORD sum = 0;
 	for (size_t j = 0; j < strData.size(); j++)
 	{
-		sum += BYTE(strData[i]) && 0xFF;//保持二进制补码的一致性，消除负数
+		sum += BYTE(strData[j]) & 0xFF;//保持二进制补码的一致性，消除负数
 	}
 	if (sum == sSum) {
 		nSize = nLength + 2 + 4;
@@ -270,6 +270,6 @@ const char* CPacket::pacData()
 	*(DWORD*)pData = nLength; pData += 4;
 	*(WORD*)pData = sCmd; pData += 2;
 	memcpy(pData, strData.c_str(), strData.size()); pData += strData.size();
-	*(WORD*)pData = sSum;
+	*(WORD*)pData = sSum; 
 	return strOut.c_str();
 }
