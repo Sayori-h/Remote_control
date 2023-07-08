@@ -108,9 +108,26 @@ int CClientSocket::dealCommand()
 	return -1;
 }
 
+void CClientSocket::dump(BYTE* pData, size_t nSize) {
+	std::string strOut;
+	for (size_t i = 0; i < nSize; i++)
+	{
+		char buf[16] = "";
+		if (i > 0 && (i % 16 == 0))
+		{
+			strOut += "\n";
+		}
+		snprintf(buf, sizeof(buf), "%02X ", pData[i] & 0xFF);
+		strOut += buf;
+	}
+	strOut += "\n";
+	OutputDebugStringA(strOut.c_str());
+}
+
 bool CClientSocket::sendCom(CPacket& pack)
 {
 	TRACE("m_sock=%d\r\n", m_sock);
+	dump((BYTE*)pack.pacData(), pack.pacSize());
 	if (m_sock == -1)return false;
 	return send(m_sock, pack.pacData(), pack.pacSize(), 0) > 0;
 }
@@ -273,3 +290,5 @@ const char* CPacket::pacData()
 	*(WORD*)pData = sSum; 
 	return strOut.c_str();
 }
+
+

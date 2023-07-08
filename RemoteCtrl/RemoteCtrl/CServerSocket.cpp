@@ -112,6 +112,7 @@ bool CServerSocket::sendCom(const char* pData, int size)
 bool CServerSocket::sendCom(CPacket& pack)
 {
 	if (m_client == -1)return false;
+	
 	int ret= send(m_client, pack.pacData(), pack.pacSize(), 0);
 	return ret > 0;
 }
@@ -150,6 +151,22 @@ void CServerSocket::CloseClient()
 {
 	closesocket(m_client);
 	m_client = INVALID_SOCKET;
+}
+
+void CServerSocket::dump(BYTE* pData, size_t nSize) {
+	std::string strOut;
+	for (size_t i = 0; i < nSize; i++)
+	{
+		char buf[16] = "";
+		if (i > 0 && (i % 16 == 0))
+		{
+			strOut += "\n";
+		}
+		snprintf(buf, sizeof(buf), "%02X ", pData[i] & 0xFF);
+		strOut += buf;
+	}
+	strOut += "\n";
+	OutputDebugStringA(strOut.c_str());
 }
 
 class CServerSocket::CNewAndDel {
@@ -241,7 +258,7 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize) :sHead(0), nLength(0), sCmd(0
 	WORD sum = 0;
 	for (size_t j = 0; j < strData.size(); j++)
 	{
-		sum += BYTE(strData[i]) && 0xFF;//保持二进制补码的一致性，消除负数
+		sum += BYTE(strData[j]) & 0xFF;//保持二进制补码的一致性，消除负数
 	}
 	if (sum == sSum) {
 		nSize = nLength + 2 + 4;

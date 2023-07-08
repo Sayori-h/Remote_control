@@ -17,6 +17,19 @@ typedef struct MouseEvent {
 	POINT ptXY;//坐标
 }MOUSEEV, * PMOUSEEV;
 
+typedef struct file_info {
+	file_info() {
+		isInvalid = 0;
+		isDirectory = 0;
+		hasNext = TRUE;
+		memset(szFileName, 0, sizeof(szFileName));
+	}
+	BOOL isInvalid;//是否有效 1无效
+	BOOL isDirectory;//是否为目录 1是
+	BOOL hasNext;//是否有后续  1有
+	char szFileName[256];//文件名
+}FILEINFO, * PFILEINFO;
+
 #pragma pack(push)
 #pragma pack(1)
 class CPacket
@@ -66,6 +79,7 @@ public:
 	bool getMouseEvent(MOUSEEV& mouse);
 	CPacket& GetPacket();
 	void CloseSocket();
+	void dump(BYTE* pData, size_t nSize);
 };
 
 extern CClientSocket* gpClient;

