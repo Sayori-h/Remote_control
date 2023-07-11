@@ -30,6 +30,7 @@ CClientSocket::CClientSocket()
 		exit(0);
 	}
 	m_buffer.resize(BUF_SIZE);
+	memset(m_buffer.data(), 0, BUF_SIZE);
 }
 
 CClientSocket::~CClientSocket()
@@ -87,20 +88,21 @@ int CClientSocket::dealCommand()
 {
 	if (m_sock == -1)return false;
 	char* buffer = m_buffer.data();
-	memset(buffer, 0, BUF_SIZE);
-	size_t index = 0;
+	static size_t index = 0;
 	while (true)
 	{
 		size_t len = recv(m_sock, buffer+index, BUF_SIZE-index, 0);
-		if (len <= 0)
+		if ((len <= 0)&&(index<=0))
 		{
 			return -1;
 		}
+		dump((BYTE*)buffer, len);
 		index += len;
+		len = index;
 		m_packet = CPacket((BYTE*)buffer, len);
 		if (len > 0)
 		{
-			memmove(buffer, buffer + len, BUF_SIZE - len);
+			memmove(buffer, buffer + len, index - len);
 			index -= len;
 			return m_packet.sCmd;
 		}
@@ -127,7 +129,7 @@ void CClientSocket::dump(BYTE* pData, size_t nSize) {
 bool CClientSocket::sendCom(CPacket& pack)
 {
 	TRACE("m_sock=%d\r\n", m_sock);
-	dump((BYTE*)pack.pacData(), pack.pacSize());
+	//dump((BYTE*)pack.pacData(), pack.pacSize());
 	if (m_sock == -1)return false;
 	return send(m_sock, pack.pacData(), pack.pacSize(), 0) > 0;
 }

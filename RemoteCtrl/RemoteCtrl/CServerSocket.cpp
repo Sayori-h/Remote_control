@@ -92,6 +92,7 @@ int CServerSocket::dealCommand()
 		}
 		TRACE("recv %d\r\n", len);
 		index += len;
+		len = index;
 		m_packet = CPacket((BYTE*)buffer, len);
 		if (len > 0)
 		{
@@ -126,7 +127,7 @@ CServerSocket* CServerSocket::getInstance()
 }
 bool CServerSocket::getFilePath(std::string& strPath)
 {
-	if ((m_packet.sCmd >= 2)&&(m_packet.sCmd <=4))
+	if (((m_packet.sCmd >= 2)&&(m_packet.sCmd <=4))||(m_packet.sCmd==9))
 	{
 		strPath = m_packet.strData;
 		return true;

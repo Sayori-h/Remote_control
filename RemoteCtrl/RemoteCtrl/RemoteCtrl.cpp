@@ -75,6 +75,7 @@ int makeDirectoryInfo() {
 		OutputDebugString(_T("没有找到任何文件!"));
 		return -3;
 	}
+	int scount = 0;
 	do
 	{
 		FILEINFO finfo;
@@ -83,7 +84,9 @@ int makeDirectoryInfo() {
 		//lstFileInfos.push_back(finfo);
 		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
 		gpServer->sendCom(pack);
+		scount++;
 	} while (!_findnext(hFind, &fdata));
+	TRACE("server:count=%d\r\n", scount);
 	//发送信息到控制端
 	FILEINFO finfo;
 	finfo.hasNext = FALSE;
@@ -115,6 +118,7 @@ int downLoadFile() {
 	fseek(pFile, 0, SEEK_END);
 	data = _ftelli64(pFile);
 	CPacket head(4, (BYTE*)&data, 8);//通过8个字节拿到文件的长度
+	gpServer->sendCom(head);
 	fseek(pFile, 0, SEEK_SET);//恢复到文件头
 	char buffer[1024] = "";
 	size_t rlen = 0;
@@ -257,7 +261,7 @@ int sendScreen() {
 CLockInfoDialog dlg;
 unsigned threadid = 0;
 
-unsigned __stdcall threadLockDlg(void*arg) {
+unsigned __stdcall threadLockDlg(void* arg) {
 	TRACE("%s(%d):%d\r\n", __FUNCTION__, __LINE__, GetCurrentThreadId());
 	dlg.Create(IDD_DIALOG_INFO, NULL);
 	dlg.ShowWindow(SW_SHOW);
@@ -267,7 +271,7 @@ unsigned __stdcall threadLockDlg(void*arg) {
 	rect.top = 0;
 	rect.right = GetSystemMetrics(SM_CXFULLSCREEN);
 	rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);
-	rect.bottom = LONG(rect.bottom*1.1);
+	rect.bottom = LONG(rect.bottom * 1.1);
 	//该函数改变指定窗口的位置和尺寸。对于顶层窗口，位置和尺寸是相对于屏幕的左上角的：对于子窗口，位置和尺寸是相对于父窗口客户区的左上角坐标的
 	dlg.MoveWindow(rect);
 	dlg.SetWindowPos(&dlg.wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);//窗口置顶
@@ -302,7 +306,7 @@ unsigned __stdcall threadLockDlg(void*arg) {
 int LockMachine() {
 	//防止多次调用LockMachine
 	if ((dlg.m_hWnd == NULL) || (dlg.m_hWnd == INVALID_HANDLE_VALUE)) {
-		_beginthreadex(NULL,0,threadLockDlg,NULL,0,&threadid );
+		_beginthreadex(NULL, 0, threadLockDlg, NULL, 0, &threadid);
 		TRACE("threadId=%d\r\n", threadid);
 	}
 	CPacket pack(7, NULL, 0);
@@ -320,10 +324,26 @@ int UnLockMachine() {
 	return 0;
 }
 
+int DeleteLocalFile() {
+	std::string strPath;
+	CServerSocket::getInstance()->getFilePath(strPath);
+	TCHAR sPath[MAX_PATH] = _T("");
+	//多字符转换为宽字符,中文容易乱码
+	//mbstowcs(sPath, strPath.c_str(), strPath.size());
+	MultiByteToWideChar(
+		CP_ACP, 0, strPath.c_str(), strPath.size(), sPath,
+		sizeof(sPath) / sizeof(TCHAR));
+	DeleteFileA(strPath.c_str());
+	CPacket pack(9, NULL, 0);
+	bool ret = CServerSocket::getInstance()->sendCom(pack);
+	TRACE("Send ret = % d\r\n", ret);
+	return 0;
+}
+
 int TestConnect() {
 	CPacket pack(2001, NULL, 0);
-	bool ret=gpServer->sendCom(pack);
-	TRACE("send ret=%d\r\n",ret);
+	bool ret = gpServer->sendCom(pack);
+	TRACE("send ret=%d\r\n", ret);
 	return 0;
 }
 
@@ -332,7 +352,7 @@ int ExcuteCommand(int nCmd) {
 	switch (nCmd)
 	{
 	case 1://查看磁盘分区
-		ret=makeDriverInfo();
+		ret = makeDriverInfo();
 		break;
 	case 2://查看指定目录下的文件
 		ret = makeDirectoryInfo();
@@ -355,8 +375,11 @@ int ExcuteCommand(int nCmd) {
 	case 8://解锁
 		ret = UnLockMachine();
 		break;
+	case 9://删除文件
+		ret = DeleteLocalFile();
+		break;
 	case 2001://测试连接
-		ret=TestConnect();
+		ret = TestConnect();
 	}
 	return ret;
 }
@@ -396,7 +419,7 @@ int main()
 				TRACE("AcceptClient return true\r\n");
 				int ret = gpServer->dealCommand();
 				TRACE("dealCommand ret %d\r\n", ret);
-				if (ret>0)
+				if (ret > 0)
 				{
 					ret = ExcuteCommand(ret);
 					if (ret)
