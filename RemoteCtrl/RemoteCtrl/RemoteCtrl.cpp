@@ -120,11 +120,11 @@ int downLoadFile() {
 	CPacket head(4, (BYTE*)&data, 8);//通过8个字节拿到文件的长度
 	gpServer->sendCom(head);
 	fseek(pFile, 0, SEEK_SET);//恢复到文件头
-	char buffer[1024] = "";
+	char buffer[2048] = "";
 	size_t rlen = 0;
 	do
 	{
-		rlen = fread(buffer, 1, 1024, pFile);
+		rlen = fread(buffer, 1, 2048, pFile);
 		CPacket pack(4, (BYTE*)buffer, rlen);//读1K发1K
 		gpServer->sendCom(pack);
 	} while (rlen >= 1024);
