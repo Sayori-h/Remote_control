@@ -21,8 +21,16 @@ public:
 
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
-
+public:
+	bool isFull()const {
+		return m_isFull;
+	}
+	CImage& GetImage() {
+		return m_image;
+	}
 private:
+	CImage m_image;//缓存
+	bool m_isFull;//缓存是否有数据  true有
 	/*---------------------------------------
 	1、查看进盘分区    ||   2、查看指定目录下的文件  
 	3、打开文件	    ||   4、下载文件
@@ -37,6 +45,10 @@ private:
 	void LoadCurInfo();
 	static void threadEntryOfDownFile(void*arg);
 	void threadDownFile();
+	//静态函数不能使用this指针
+	static void threadEntryOfWatchData(void*arg);
+	//成员函数可以使用this指针
+	void threadWatchData();
 
 // 实现
 protected:
@@ -65,4 +77,5 @@ public:
 	afx_msg void OnDeleteFile();
 	afx_msg void OnRunFile();
 	afx_msg LRESULT OnSendPacket(WPARAM wParam, LPARAM lParam);//自定义消息响应函数②
+	afx_msg void OnBnClickedBtnStartWatch();
 };

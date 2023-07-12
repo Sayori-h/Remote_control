@@ -7,6 +7,7 @@
 #include "RemoteClient.h"
 #include "RemoteClientDlg.h"
 #include "afxdialogex.h"
+#include "CWatchDialog.h"
 
 
 
@@ -235,6 +236,61 @@ void CRemoteClientDlg::threadDownFile()
 	MessageBox(_T("下载完成!!"), _T("完成"));
 }
 
+void CRemoteClientDlg::threadEntryOfWatchData(void* arg)
+{	//在成员函数里可以直接用this
+	CRemoteClientDlg* thiz = (CRemoteClientDlg*)arg;
+	thiz->threadWatchData();
+	_endthread();
+}
+
+void CRemoteClientDlg::threadWatchData()
+{
+	CClientSocket* pClient = NULL;
+	do
+	{
+		pClient = CClientSocket::getInstance();
+	} while (pClient == NULL);
+	while (true)
+	{
+		CPacket pack(6, NULL, 0);
+		bool ret = pClient->sendCom(pack);
+		if (ret)
+		{
+			int cmd = pClient->dealCommand();//拿数据
+			if (cmd == 6)
+			{
+				if (!m_isFull)//更新数据到缓存
+				{
+					BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
+					//TODO:存入CImage
+					//创建一块内存句柄，用于目标流
+					HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
+					if (!hMem)
+					{
+						TRACE("内存不足了!");
+						Sleep(1);
+						continue;
+					}
+					IStream* pStream = NULL;
+					HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
+					if (hRet == S_OK) {
+						ULONG length = 0;
+						pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
+						LARGE_INTEGER bg{ 0 };
+						pStream->Seek(bg, STREAM_SEEK_SET, NULL);
+						m_image.Load(pStream);
+						m_isFull = true;
+					}
+				}
+			}
+		}
+		else
+		{
+			Sleep(1);//防止251行连上后随后又突然断开
+		}
+	}
+}
+
 BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
@@ -247,7 +303,8 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_COMMAND(ID_DOWNLOAD_FILE, &CRemoteClientDlg::OnDownloadFile)
 	ON_COMMAND(ID_DELETE_FILE, &CRemoteClientDlg::OnDeleteFile)
 	ON_COMMAND(ID_RUN_FILE, &CRemoteClientDlg::OnRunFile)
-	ON_MESSAGE(WM_SEND_PACKET,&CRemoteClientDlg::OnSendPacket)//注册消息③：告诉系统消息对应的响应函数
+	ON_MESSAGE(WM_SEND_PACKET, &CRemoteClientDlg::OnSendPacket)//注册消息③：告诉系统消息对应的响应函数
+	ON_BN_CLICKED(IDC_BTN_START_WATCH, &CRemoteClientDlg::OnBnClickedBtnStartWatch)
 END_MESSAGE_MAP()
 
 
@@ -289,7 +346,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	UpdateData(FALSE);
 	m_dlgStatus.Create(IDD_DLG_STATUS, this);
 	m_dlgStatus.ShowWindow(SW_HIDE);
-
+	m_isFull = false;
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -456,4 +513,15 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 	CString strFile = (LPCSTR)lParam;
 	int ret = SendCommandPacket(wParam >> 1, wParam & 1, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
 	return ret;
+}
+
+
+void CRemoteClientDlg::OnBnClickedBtnStartWatch()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	_beginthread(CRemoteClientDlg::threadEntryOfWatchData, 0, this);
+	//GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow();
+	CWatchDialog dlg(this);
+	dlg.DoModal();
+
 }
