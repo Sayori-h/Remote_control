@@ -75,7 +75,7 @@ int CServerSocket::dealCommand()
 {
 	if (m_client == -1)return false;
 	char* buffer = new char[BUF_SIZE];
-	if (buffer==NULL)
+	if (buffer == NULL)
 	{
 		TRACE("内存不足!");
 		return -2;
@@ -84,13 +84,13 @@ int CServerSocket::dealCommand()
 	size_t index = 0;
 	while (true)
 	{
-		size_t len = recv(m_client, buffer+index, BUF_SIZE-index, 0);
+		size_t len = recv(m_client, buffer + index, BUF_SIZE - index, 0);
 		if (len <= 0)
 		{
 			delete[]buffer;
 			return -1;
 		}
-		TRACE("recv %d\r\n", len);
+		//TRACE("recv %d\r\n", len);
 		index += len;
 		len = index;
 		m_packet = CPacket((BYTE*)buffer, len);
@@ -113,8 +113,8 @@ bool CServerSocket::sendCom(const char* pData, int size)
 bool CServerSocket::sendCom(CPacket& pack)
 {
 	if (m_client == -1)return false;
-	
-	int ret= send(m_client, pack.pacData(), pack.pacSize(), 0);
+	TRACE("Png Size %d\r\n", pack.pacSize());
+	int ret = send(m_client, pack.pacData(), pack.pacSize(), 0);
 	return ret > 0;
 }
 CServerSocket* CServerSocket::getInstance()
@@ -127,15 +127,15 @@ CServerSocket* CServerSocket::getInstance()
 }
 bool CServerSocket::getFilePath(std::string& strPath)
 {
-	if (((m_packet.sCmd >= 2)&&(m_packet.sCmd <=4))||(m_packet.sCmd==9))
+	if (((m_packet.sCmd >= 2) && (m_packet.sCmd <= 4)) || (m_packet.sCmd == 9))
 	{
 		strPath = m_packet.strData;
 		return true;
 	}
 	return false;
 }
-bool CServerSocket::getMouseEvent(MOUSEEV& mouse){
-	if (m_packet.sCmd==5)
+bool CServerSocket::getMouseEvent(MOUSEEV& mouse) {
+	if (m_packet.sCmd == 5)
 	{
 		memcpy(&mouse, m_packet.strData.c_str(), sizeof(MOUSEEV));//strData可以装任何数据
 
@@ -209,8 +209,8 @@ CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize)
 	sHead = 0xFEFF;
 	nLength = nSize + 4;
 	sCmd = nCmd;
-	if (nSize>0)
-	{
+	if (nSize > 0)
+	{ // 直接就是一次性发完的
 		strData.resize(nSize);
 		memcpy((void*)strData.c_str(), pData, nSize);
 	}
@@ -289,6 +289,6 @@ const char* CPacket::pacData()
 	*(DWORD*)pData = nLength; pData += 4;
 	*(WORD*)pData = sCmd; pData += 2;
 	memcpy(pData, strData.c_str(), strData.size()); pData += strData.size();
-	*(WORD*)pData = sSum; 
+	*(WORD*)pData = sSum;
 	return strOut.c_str();
 }

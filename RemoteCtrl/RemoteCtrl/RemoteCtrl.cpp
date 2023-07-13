@@ -244,12 +244,14 @@ int sendScreen() {
 	HRESULT ret = CreateStreamOnHGlobal(hMen, TRUE, &pStream);
 	if (ret == S_OK)
 	{
-		screen.Save(_T("test2023"), Gdiplus::ImageFormatPNG);//保存为png格式图片文件,仅保存到文件夹，需要保存到内存
+		screen.Save(pStream, Gdiplus::ImageFormatPNG);//保存为png格式图片文件,仅保存到文件夹，需要保存到内存
 		LARGE_INTEGER bg{ 0 };
 		pStream->Seek(bg, STREAM_SEEK_SET, NULL);
 		PBYTE pData = (PBYTE)GlobalLock(hMen);
-		size_t nSize = GlobalSize(hMen);
-		CPacket(6, pData, nSize);
+		size_t nSize = GlobalSize(hMen);		
+		CPacket pack(6, pData, nSize);
+
+		gpServer->sendCom(pack);
 		GlobalUnlock(hMen);
 	}
 	pStream->Release();
@@ -393,7 +395,6 @@ int main()
 		// 初始化 MFC 并在失败时显示错误
 		if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0))
 		{
-			// TODO: 在此处为应用程序的行为编写代码。
 			wprintf(L"错误: MFC 初始化失败\n");
 			nRetCode = 1;
 		}
@@ -433,7 +434,7 @@ int main()
 	}
 	else
 	{
-		// TODO: 更改错误代码以符合需要
+		// 更改错误代码以符合需要
 		wprintf(L"错误: GetModuleHandle 失败\n");
 		nRetCode = 1;
 	}

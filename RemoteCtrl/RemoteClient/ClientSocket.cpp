@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "ClientSocket.h"
-#define BUF_SIZE 4096
+#define BUF_SIZE 409600000
 
 std::string GetErrInfo(int wsaErrorCode) {
 	LPVOID lpMsgBuf = NULL;
@@ -96,7 +96,7 @@ int CClientSocket::dealCommand()
 		{
 			return -1;
 		}
-		dump((BYTE*)buffer, len);
+		//dump((BYTE*)buffer, len);
 		index += len;
 		len = index;
 		m_packet = CPacket((BYTE*)buffer, len);

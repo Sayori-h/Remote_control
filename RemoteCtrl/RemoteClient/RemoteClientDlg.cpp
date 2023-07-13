@@ -245,6 +245,7 @@ void CRemoteClientDlg::threadEntryOfWatchData(void* arg)
 
 void CRemoteClientDlg::threadWatchData()
 {
+	Sleep(50);
 	CClientSocket* pClient = NULL;
 	do
 	{
@@ -252,36 +253,38 @@ void CRemoteClientDlg::threadWatchData()
 	} while (pClient == NULL);
 	while (true)
 	{
-		CPacket pack(6, NULL, 0);
-		bool ret = pClient->sendCom(pack);
-		if (ret)
+		//CPacket pack(6, NULL, 0);
+		//bool ret = pClient->sendCom(pack);
+		//int cmd = pClient->dealCommand();//命令只发一个包，发完就关闭了，此处再deal必定返回-1
+		if (!m_isFull)//更新数据到缓存
 		{
-			int cmd = pClient->dealCommand();//拿数据
-			if (cmd == 6)
-			{
-				if (!m_isFull)//更新数据到缓存
+			//子线程需要把消息send进主线程
+			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);
+			if (ret == 6) {
+				BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
+				//存入CImage
+				//创建一块内存句柄，用于目标流
+				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
+				if (!hMem)
 				{
-					BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
-					//TODO:存入CImage
-					//创建一块内存句柄，用于目标流
-					HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
-					if (!hMem)
-					{
-						TRACE("内存不足了!");
-						Sleep(1);
-						continue;
-					}
-					IStream* pStream = NULL;
-					HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
-					if (hRet == S_OK) {
-						ULONG length = 0;
-						pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
-						LARGE_INTEGER bg{ 0 };
-						pStream->Seek(bg, STREAM_SEEK_SET, NULL);
-						m_image.Load(pStream);
-						m_isFull = true;
-					}
+					TRACE("内存不足了!");
+					Sleep(1);
+					continue;
 				}
+				IStream* pStream = NULL;
+				HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
+				if (hRet == S_OK) {
+					ULONG length = 0;
+					pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
+					LARGE_INTEGER bg{ 0 };
+					pStream->Seek(bg, STREAM_SEEK_SET, NULL);
+					m_image.Load(pStream);
+					m_isFull = true;
+				}
+			}
+			else
+			{
+				Sleep(1);
 			}
 		}
 		else
@@ -447,7 +450,6 @@ void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
-	// TODO: 在此添加控件通知处理程序代码
 	CPoint ptMouse, ptList;
 	GetCursorPos(&ptMouse);
 	ptList = ptMouse;
@@ -467,7 +469,7 @@ void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
 
 void CRemoteClientDlg::OnDownloadFile()
 {
-	//TODO:线程处理函数
+	//线程处理函数
 	_beginthread(CRemoteClientDlg::threadEntryOfDownFile, 0, this);
 	BeginWaitCursor();
 	m_dlgStatus.m_info.SetWindowText(_T("命令正在执行中!"));
@@ -479,7 +481,6 @@ void CRemoteClientDlg::OnDownloadFile()
 
 void CRemoteClientDlg::OnDeleteFile()
 {
-	// TODO: 在此添加命令处理程序代码
 	HTREEITEM hSelected = m_Tree.GetSelectedItem();
 	CString strPath = GetPath(hSelected);
 	int nSelected = m_List.GetSelectionMark();
@@ -494,7 +495,6 @@ void CRemoteClientDlg::OnDeleteFile()
 
 void CRemoteClientDlg::OnRunFile()
 {
-	// TODO: 在此添加命令处理程序代码
 	HTREEITEM hSelected = m_Tree.GetSelectedItem();
 	CString strPath = GetPath(hSelected);
 	int nSelected = m_List.GetSelectionMark();
@@ -510,15 +510,28 @@ void CRemoteClientDlg::OnRunFile()
 
 LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 {//实现消息响应函数④
-	CString strFile = (LPCSTR)lParam;
-	int ret = SendCommandPacket(wParam >> 1, wParam & 1, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
+	int ret = 0;
+	int cmd = wParam >> 1;
+	switch (cmd)
+	{
+	case 4: {
+		CString strFile = (LPCSTR)lParam;
+		ret = SendCommandPacket(cmd, wParam & 1, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
+	}
+		  break;
+	case 6: {
+		ret = SendCommandPacket(cmd, wParam & 1);
+	}
+		  break;
+	default:
+		ret = -1;
+	}
 	return ret;
 }
 
 
 void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 {
-	// TODO: 在此添加控件通知处理程序代码
 	_beginthread(CRemoteClientDlg::threadEntryOfWatchData, 0, this);
 	//GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow();
 	CWatchDialog dlg(this);
