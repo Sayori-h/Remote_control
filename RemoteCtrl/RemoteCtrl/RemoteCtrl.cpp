@@ -175,6 +175,7 @@ int mouseEvent() {
 		default:
 			break;
 		}
+		TRACE("mouse event:%08X pos=(%d,%d)\r\n", nFlags, mouse.ptXY.x, mouse.ptXY.y);
 		switch (nFlags)//避免嵌套，把情况单独列出来
 		{
 		case 0x21://left double click

@@ -21,7 +21,7 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-	CPoint UserPoint2RemoteScreenPoint(CPoint& point);
+	CPoint UserPoint2RemoteScreenPoint(CPoint& point,bool isScreen=false);
 	virtual BOOL OnInitDialog();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	CStatic m_picture;
@@ -31,8 +31,6 @@ public:
 	afx_msg void OnRButtonDblClk(UINT nFlags, CPoint point);
 	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnRButtonUp(UINT nFlags, CPoint point);
-//	afx_msg void OnMove(int x, int y);
 	afx_msg void OnStnClickedWatch();
-//	afx_msg void OnMove(int x, int y);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 };
