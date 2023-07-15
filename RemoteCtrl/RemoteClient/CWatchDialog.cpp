@@ -37,10 +37,12 @@ BEGIN_MESSAGE_MAP(CWatchDialog, CDialog)
 	ON_WM_RBUTTONDBLCLK()
 	ON_WM_RBUTTONDOWN()
 	ON_WM_RBUTTONUP()
-//	ON_WM_MOVE()
+	//	ON_WM_MOVE()
 	ON_STN_CLICKED(IDC_WATCH, &CWatchDialog::OnStnClickedWatch)
-//	ON_WM_MOVE()
-ON_WM_MOUSEMOVE()
+	//	ON_WM_MOVE()
+	ON_WM_MOUSEMOVE()
+	ON_BN_CLICKED(IDC_BTN_LOCK, &CWatchDialog::OnBnClickedBtnLock)
+	ON_BN_CLICKED(IDC_BTN_UNLOCK, &CWatchDialog::OnBnClickedBtnUnlock)
 END_MESSAGE_MAP()
 
 
@@ -59,7 +61,7 @@ CPoint CWatchDialog::UserPoint2RemoteScreenPoint(CPoint& point, bool isScreen)
 	int width = 1920, height = 1080;
 	int x = point.x * width / width0;
 	int y = point.y * height / height0;
-	return CPoint(x,y);
+	return CPoint(x, y);
 }
 
 BOOL CWatchDialog::OnInitDialog()
@@ -83,7 +85,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 			//pParent->GetImage().BitBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, SRCCOPY);
 			//调整图像大小
 			pParent->GetImage().StretchBlt(
-				m_picture.GetDC()->GetSafeHdc(),0,0, rect.Width(), rect.Height(), SRCCOPY);
+				m_picture.GetDC()->GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
 			m_picture.InvalidateRect(NULL);
 			pParent->GetImage().Destroy();
 			pParent->SetImageStatus();
@@ -190,7 +192,7 @@ void CWatchDialog::OnStnClickedWatch()
 	CPoint point;
 	GetCursorPos(&point);//屏幕坐标，其他的事件都是客户区坐标
 	//坐标转换
-	CPoint remote = UserPoint2RemoteScreenPoint(point,true);
+	CPoint remote = UserPoint2RemoteScreenPoint(point, true);
 	//封装
 	MOUSEEV event;
 	event.ptXY = remote;
@@ -211,6 +213,20 @@ void CWatchDialog::OnMouseMove(UINT nFlags, CPoint point)
 	event.nButton = 8;//only move,no click
 	event.nAction = 0;//移动
 	CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
-	pParent->SendMessage(WM_SEND_PACKET, 5 << 1 | 1, (WPARAM) & event);
+	pParent->SendMessage(WM_SEND_PACKET, 6 << 1 | 1, (WPARAM) & event);
 	CDialog::OnMouseMove(nFlags, point);
+}
+
+
+void CWatchDialog::OnBnClickedBtnLock()
+{
+	CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
+	pParent->SendMessage(WM_SEND_PACKET, 7 << 1 | 1);
+}
+
+
+void CWatchDialog::OnBnClickedBtnUnlock()
+{
+	CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
+	pParent->SendMessage(WM_SEND_PACKET, 8 << 1 | 1);
 }

@@ -139,7 +139,8 @@ void CRemoteClientDlg::LoadFileInfo()
 				continue;
 			}
 			HTREEITEM hTemp = m_Tree.InsertItem(pInfo->szFileName, hTreeSelected, TVI_LAST);
-			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);//如果是目录，就有子节点;区分目录和文件，目录后面插NULL，文件不插
+			//如果是目录，就有子节点;区分目录和文件，目录后面插NULL，文件不插
+			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 		}
 		else
 		{
@@ -344,7 +345,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	UpdateData();
-	m_server_address = 0x7F000001;
+	m_server_address = 0xC0A88E80;
 	m_nPort = _T("9527");
 	UpdateData(FALSE);
 	m_dlgStatus.Create(IDD_DLG_STATUS, this);
@@ -423,7 +424,8 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 		if (drivers[i] == ',') {
 			dr += ":";
 			HTREEITEM hTemp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
-			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);//如果是目录，就有子节点
+			//如果是目录，就有子节点
+			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 			dr.clear();
 			continue;
 		}
@@ -523,7 +525,9 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 		ret = SendCommandPacket(cmd, wParam & 1, (BYTE*)lParam, sizeof(MOUSEEV));
 	}
 		  break;
-	case 6: {
+	case 6: 
+	case 7: 
+	case 8: {
 		ret = SendCommandPacket(cmd, wParam & 1);
 	}
 		  break;

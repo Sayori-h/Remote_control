@@ -249,7 +249,7 @@ int sendScreen() {
 		LARGE_INTEGER bg{ 0 };
 		pStream->Seek(bg, STREAM_SEEK_SET, NULL);
 		PBYTE pData = (PBYTE)GlobalLock(hMen);
-		size_t nSize = GlobalSize(hMen);		
+		size_t nSize = GlobalSize(hMen);
 		CPacket pack(6, pData, nSize);
 
 		gpServer->sendCom(pack);
@@ -275,13 +275,24 @@ unsigned __stdcall threadLockDlg(void* arg) {
 	rect.right = GetSystemMetrics(SM_CXFULLSCREEN);
 	rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);
 	rect.bottom = LONG(rect.bottom * 1.1);
-	//该函数改变指定窗口的位置和尺寸。对于顶层窗口，位置和尺寸是相对于屏幕的左上角的：对于子窗口，位置和尺寸是相对于父窗口客户区的左上角坐标的
-	dlg.MoveWindow(rect);
+	TRACE("right =%d bottom =%d\r\n", rect.right, rect.bottom);
+		//该函数改变指定窗口的位置和尺寸。对于顶层窗口，位置和尺寸是相对于屏幕的左上角的：对于子窗口，位置和尺寸是相对于父窗口客户区的左上角坐标的
+		dlg.MoveWindow(rect);
+	CWnd* pText = dlg.GetDlgItem(IDC_STATIC);
+	if (pText) {
+		CRect rtText;
+		pText->GetWindowRect(rtText);
+		int nWidth = rtText.Width();//w0
+		int x = (rect.right - nWidth) / 2;
+		int nHeight = rtText.Height();
+		int y = (rect.bottom - nHeight) / 2;
+		pText->MoveWindow(x, y, rtText.Width(), rtText.Height());
+	}
 	dlg.SetWindowPos(&dlg.wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);//窗口置顶
-	//ShowCursor(false);//隐藏鼠标
+	ShowCursor(false);//隐藏鼠标
 	::ShowWindow(::FindWindow(_T("Shell_TrayWnd"), NULL), SW_HIDE);//隐藏windows任务栏
 	//GetWindowRect得到的是整个窗口相对于窗口左上角的坐标，实际上就是这个对话框的大小
-	//dlg.GetWindowRect(rect);
+	dlg.GetWindowRect(rect);
 	/*该函数把鼠标限制在屏幕上的一个矩形区域内，如果调用SetCursor或用鼠标设置的一个随后的鼠标位置在该矩形区域的外面，
 	则系统自动调整该位置以保持鼠标在矩形区域之内。*/
 	rect.left = 0;
@@ -300,8 +311,9 @@ unsigned __stdcall threadLockDlg(void* arg) {
 			}
 		}
 	}
+	ClipCursor(NULL);
 	ShowCursor(true);
-	::ShowWindow(::FindWindow(_T("Shell_TrayWnd"), NULL), SW_SHOW);//显示windows任务栏
+	::ShowWindow(::FindWindow(_T("Shell_TrayWnd"), NULL), SW_SHOW);//恢复windows任务栏
 	dlg.DestroyWindow();
 	_endthreadex(0);
 	return 0;
@@ -322,7 +334,7 @@ int UnLockMachine() {
 	//::SendMessage(dlg.m_hWnd, WM_KEYDOWN, 0x1B, 0x00010001);//窗口句柄
 	//MFC消息机制是基于线程的（CWinThread类），没有绑定线程发消息没用，必须往线程里发消息
 	PostThreadMessage(threadid, WM_KEYDOWN, 0x1B, 0);
-	CPacket pack(7, NULL, 0);
+	CPacket pack(8, NULL, 0);
 	gpServer->sendCom(pack);
 	return 0;
 }
