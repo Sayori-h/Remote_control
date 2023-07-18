@@ -153,6 +153,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CHuxlTool.h" />
+    <ClInclude Include="Command.h" />
     <ClInclude Include="CServerSocket.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="LockInfoDialog.h" />
@@ -162,6 +164,8 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CHuxlTool.cpp" />
+    <ClCompile Include="Command.cpp" />
     <ClCompile Include="CServerSocket.cpp" />
     <ClCompile Include="LockInfoDialog.cpp" />
     <ClCompile Include="pch.cpp">
