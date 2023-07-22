@@ -6,7 +6,7 @@ CCommand::CCommand() :threadid(0)
 {
 	struct {
 		int nCmd;
-		CMDFUNC func;
+		CMDFUNC func;//º¯ÊýÖ¸Õë
 	}data[] = {
 		{ 1   ,&CCommand::makeDriverInfo },
 		{ 2   ,&CCommand::makeDirectoryInfo },
