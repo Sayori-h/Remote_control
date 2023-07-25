@@ -16,12 +16,15 @@ std::string GetErrInfo(int wsaErrorCode) {
 	LocalFree(lpMsgBuf);
 	return ret;
 }
-CClientSocket::CClientSocket(const CClientSocket& ss) :\
-m_sock{ ss.m_sock }
+CClientSocket::CClientSocket(const CClientSocket& ss) 
 {
+	m_sock = ss.m_sock;
+	m_nIP = ss.m_nIP;
+	m_nPort = ss.m_nPort;
 }
 
-CClientSocket::CClientSocket()
+CClientSocket::CClientSocket():m_nIP(INADDR_ANY), m_nPort(0)
+//无效IP和端口，防止连上
 {
 	m_sock = INVALID_SOCKET;
 	if (InitSockEnv() == FALSE)
@@ -59,7 +62,7 @@ void CClientSocket::releaseInstance()
 	}
 }
 
-bool CClientSocket::initSocket(int nIP,int nPort)
+bool CClientSocket::initSocket()
 {
 	if (m_sock != INVALID_SOCKET)CloseSocket();
 	m_sock = socket(PF_INET, SOCK_STREAM, 0);
@@ -67,8 +70,8 @@ bool CClientSocket::initSocket(int nIP,int nPort)
 	sockaddr_in serv_adr;
 	memset(&serv_adr, 0, sizeof(serv_adr));
 	serv_adr.sin_family = AF_INET;
-	serv_adr.sin_addr.s_addr = htonl(nIP);
-	serv_adr.sin_port = htons(nPort);
+	serv_adr.sin_addr.s_addr = htonl(m_nIP);
+	serv_adr.sin_port = htons(m_nPort);
 	if (serv_adr.sin_addr.s_addr == INADDR_NONE)
 	{
 		AfxMessageBox("无可用IP地址!");
@@ -126,12 +129,19 @@ void CClientSocket::dump(BYTE* pData, size_t nSize) {
 	OutputDebugStringA(strOut.c_str());
 }
 
-bool CClientSocket::sendCom(CPacket& pack)
+bool CClientSocket::sendCom(const CPacket& pack)
 {
 	TRACE("m_sock=%d\r\n", m_sock);
 	//dump((BYTE*)pack.pacData(), pack.pacSize());
 	if (m_sock == -1)return false;
-	return send(m_sock, pack.pacData(), pack.pacSize(), 0) > 0;
+	std::string strOut;
+	pack.pacData(strOut);
+	return send(m_sock,strOut.c_str(), strOut.size(), 0) > 0;
+}
+bool CClientSocket::sendCom(const char* pData, int nSize)
+{
+	if (m_sock == -1)return false;
+	return send(m_sock,pData,nSize,0)>0;
 }
 CClientSocket* CClientSocket::getInstance()
 {
@@ -168,6 +178,12 @@ void CClientSocket::CloseSocket()
 {
 	closesocket(m_sock);
 	m_sock = INVALID_SOCKET;
+}
+
+void CClientSocket::UpdateAddress(int nIP, int nPort)
+{
+	m_nIP = nIP;
+	m_nPort = nPort;
 }
 
 class CClientSocket::CNewAndDel {
@@ -279,7 +295,7 @@ int CPacket::pacSize()
 	return nLength + 6;
 }
 
-const char* CPacket::pacData()
+const char* CPacket::pacData(std::string&strOut) const
 {
 	strOut.resize(nLength + 6);
 	BYTE* pData = (BYTE*)strOut.c_str();

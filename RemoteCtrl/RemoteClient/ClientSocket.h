@@ -41,7 +41,7 @@ public:
 	WORD sCmd;//控制命令
 	std::string strData;//包的数据
 	WORD sSum;//和校验
-	std::string strOut;//整个包的数据
+	//std::string strOut;//整个包的数据
 	CPacket();
 	CPacket& operator=(const CPacket& pack);
 	~CPacket() {};
@@ -49,7 +49,7 @@ public:
 	CPacket(const BYTE* pData, size_t& nSize);
 	CPacket(const CPacket& pack);
 	int pacSize();//包数据的大小
-	const char* pacData();//包的数据的内容
+	const char* pacData(std::string& strOut) const;//包的数据的内容
 };
 #pragma pack(pop)
 class CClientSocket
@@ -70,15 +70,18 @@ private:
 	static CClientSocket* m_instance;
 	static CNewAndDel m_newdel;
 	std::vector<char>m_buffer;
+	int m_nIP, m_nPort;//地址和端口
 public:
-	bool initSocket(int nIP, int nPort);
+	bool initSocket();
 	int dealCommand();
-	bool sendCom(CPacket& pData);
+	bool sendCom(const CPacket& pData);
+	bool sendCom(const char* pData, int nSize);
 	static CClientSocket* getInstance();
 	bool getFilePath(std::string& strPath);
 	bool getMouseEvent(MOUSEEV& mouse);
 	CPacket& GetPacket();
 	void CloseSocket();
+	void UpdateAddress(int nIP, int nPort);
 	void dump(BYTE* pData, size_t nSize);
 };
 

@@ -3,8 +3,13 @@
 //
 
 #pragma once
+#include "RemoteClient.h"
+#include "afxdialogex.h"
+#include "CWatchDialog.h"
 #include "ClientSocket.h"
 #include "StatusDlg.h"
+
+//class CClientController;
 
 #define WM_SEND_PACKET (WM_USER+1)//发送数据包消息，自定义消息①
 // CRemoteClientDlg 对话框
@@ -34,24 +39,17 @@ public:
 private:
 	CImage m_image;//缓存
 	bool m_isFull;//缓存是否有数据  true有
-	/*---------------------------------------
-	1、查看进盘分区    ||   2、查看指定目录下的文件  
-	3、打开文件	    ||   4、下载文件
-	5、鼠标操作	    ||   6、发送屏幕的内容
-	7、锁机			||   8、解锁
-	9、删除文件		||   2001、测试连接
-	返回值：是命令号，如果<0则错误*/
-	int SendCommandPacket(int nCmd, bool bAutoClose=true,BYTE* pData = NULL, size_t nLength = 0);
+	bool m_isClosed;//监视是否关闭
 	CString GetPath(HTREEITEM hTree);
 	void DelTreeChildItem(HTREEITEM hTree);
 	void LoadFileInfo();
 	void LoadCurInfo();
-	static void threadEntryOfDownFile(void*arg);
-	void threadDownFile();
+	//static void threadEntryOfDownFile(void*arg);
+	//void threadDownFile();
 	//静态函数不能使用this指针
-	static void threadEntryOfWatchData(void*arg);
-	//成员函数可以使用this指针
-	void threadWatchData();
+	//static void threadEntryOfWatchData(void*arg);
+	////成员函数可以使用this指针
+	//void threadWatchData();
 
 // 实现
 protected:
@@ -81,4 +79,6 @@ public:
 	afx_msg void OnRunFile();
 	afx_msg LRESULT OnSendPacket(WPARAM wParam, LPARAM lParam);//自定义消息响应函数②
 	afx_msg void OnBnClickedBtnStartWatch();
+	afx_msg void OnIpnFieldchangedIpaddressServ(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnEnChangeEditPort();
 };
