@@ -14,6 +14,9 @@
 #define WM_SHOW_WATCH   (WM_USER + 4)//远程监视
 #define WM_SEND_MESSAGE (WM_USER+0x1000)//自定义消息处理
 
+//业务逻辑和流程，是随时可能发生改变的！！！！！
+//业务逻辑和流程，是随时可能发生改变的！！！！！
+//业务逻辑和流程，是随时可能发生改变的！！！！！
 
 class CClientController
 {

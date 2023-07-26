@@ -10,12 +10,13 @@ CClientController* CClientController::m_instance = NULL;
 class CClientController::CNewAndDel {
 public:
 	CNewAndDel() {
-		CClientController::getInstance();
+		//CClientController::getInstance();
 	}
 	~CNewAndDel() {
 		CClientController::releaseInstance();
 	}
 };
+CClientController::CNewAndDel CClientController::m_newdel;
 
 int CClientController::Invoke(CWnd*& pMainWnd)
 {
@@ -98,9 +99,9 @@ int CClientController::DownFile(CString& strPath)
 void CClientController::StartWatchScreen()
 {
 	m_isClosed = false;
-	CWatchDialog dlg(&m_remoteDlg);
+	//m_watchDlg.SetParent(&m_remoteDlg);
 	m_hThreadWatch = (HANDLE)_beginthread(&CClientController::threadWatchScreen, 0, this);
-	dlg.DoModal();
+	m_watchDlg.DoModal();
 	m_isClosed = true;
 	WaitForSingleObject(m_hThreadWatch, 500);
 }
@@ -130,12 +131,12 @@ void CClientController::threadWatchScreen()
 	Sleep(50);
 	while (!m_isClosed)
 	{
-		if (m_remoteDlg.isFull()==false) {
+		if (m_watchDlg.isFull()==false) {
 			int ret=SendCommandPacket(6);
 			if (ret == 6) {
 				CImage image;
 				if (GetImage(m_remoteDlg.GetImage()) == 0) {
-					m_remoteDlg.SetImageStatus(true);
+					m_watchDlg.SetImageStatus(true);
 				}
 				else TRACE("ªÒ»°Õº∆¨ ß∞‹£°%d\r\n",ret);
 			}
@@ -287,7 +288,7 @@ CClientController* CClientController::getInstance()
 				[i].nMsg, MsgFuncs[i].func));
 		}
 	}
-	return NULL;
+	return m_instance;
 }
 
 int CClientController::InitController()

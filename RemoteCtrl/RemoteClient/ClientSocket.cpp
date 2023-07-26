@@ -78,10 +78,11 @@ bool CClientSocket::initSocket()
 		return false;
 	}
 	int ret = connect(m_sock, (sockaddr*)&serv_adr, sizeof(serv_adr));
+	int err = WSAGetLastError();
 	if (ret==-1)
 	{
 		AfxMessageBox("连接失败!");
-		TRACE("连接失败 %d %s\r\n", WSAGetLastError(),GetErrInfo(WSAGetLastError()));
+		TRACE("连接失败 %d %s\r\n", err,GetErrInfo(WSAGetLastError()));
 		return false;
 	}
 	return true;
@@ -95,12 +96,11 @@ int CClientSocket::dealCommand()
 	while (true)
 	{
 		size_t len = recv(m_sock, buffer+index, BUF_SIZE-index, 0);
-		if ((len <= 0)&&(index<=0))
-		{
-			return -1;
-		}
+		if (((int)len <= 0)&&((int)index<=0))return -1;
+		TRACE("recv len =%d(0x%08X) index =%d(0x%08X)\r\n", len, len, index, index);
 		//dump((BYTE*)buffer, len);
 		index += len;
+		TRACE("recv len =%d(0x%08X) index =%d(0x%08X)\r\n", len, len, index, index);
 		len = index;
 		m_packet = CPacket((BYTE*)buffer, len);
 		if (len > 0)

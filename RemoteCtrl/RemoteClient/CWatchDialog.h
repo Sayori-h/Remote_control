@@ -10,6 +10,8 @@ class CWatchDialog : public CDialog
 public:
 	CWatchDialog(CWnd* pParent = nullptr);   // 标准构造函数
 	virtual ~CWatchDialog();
+	int m_nObjWidth;
+	int m_nObjHeight;
 
 // 对话框数据
 #ifdef AFX_DESIGN_TIME
@@ -17,10 +19,17 @@ public:
 #endif
 
 protected:
+	bool m_isFull;//缓存是否有数据  true有
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
-
+	
 	DECLARE_MESSAGE_MAP()
 public:
+	void SetImageStatus(bool isFull = false) {
+		m_isFull = isFull;
+	}
+	bool isFull()const {
+		return m_isFull;
+	}
 	CPoint UserPoint2RemoteScreenPoint(CPoint& point,bool isScreen=false);
 	virtual BOOL OnInitDialog();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
