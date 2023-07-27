@@ -12,7 +12,7 @@ public:
 	virtual ~CWatchDialog();
 	int m_nObjWidth;
 	int m_nObjHeight;
-
+	CImage m_image; // 这个可以设置为私有 然后开个接口去访问
 // 对话框数据
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_DLG_WATCH };

@@ -9,10 +9,10 @@
 
 // CStatusDlg 对话框
 
-IMPLEMENT_DYNAMIC(CStatusDlg, CDialogEx)
+IMPLEMENT_DYNAMIC(CStatusDlg, CDialog)
 
 CStatusDlg::CStatusDlg(CWnd* pParent /*=nullptr*/)
-	: CDialogEx(IDD_DLG_STATUS, pParent)
+	: CDialog(IDD_DIALOG_S, pParent)
 {
 
 }
@@ -23,12 +23,12 @@ CStatusDlg::~CStatusDlg()
 
 void CStatusDlg::DoDataExchange(CDataExchange* pDX)
 {
-	CDialogEx::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_EDIT_INFO, m_info);
+	CDialog::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_EDIT_I, m_info);
 }
 
 
-BEGIN_MESSAGE_MAP(CStatusDlg, CDialogEx)
+BEGIN_MESSAGE_MAP(CStatusDlg, CDialog)
 END_MESSAGE_MAP()
 
 

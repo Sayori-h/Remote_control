@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "CServerSocket.h"
-#define BUF_SIZE 4096
+#define BUF_SIZE 40960000
 
 CServerSocket::CServerSocket(const CServerSocket& ss) :\
 m_serv_sock{ ss.m_serv_sock }, m_client{ ss.m_client }
@@ -81,11 +81,11 @@ int CServerSocket::dealCommand()
 		return -2;
 	}
 	memset(buffer, 0, BUF_SIZE);
-	size_t index = 0;
+	static size_t index = 0;
 	while (true)
 	{
 		size_t len = recv(m_client, buffer + index, BUF_SIZE - index, 0);
-		if (len <= 0)
+		if ((int)len <= 0)
 		{
 			delete[]buffer;
 			return -1;
@@ -240,7 +240,7 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize) :sHead(0), nLength(0), sCmd(0
 		memcpy((void*)strData.c_str(), pData + i, nLength - 4);
 		i += nLength - 4;
 	}
-	sSum = *(WORD*)(pData + i);
+	sSum = *(WORD*)(pData + i); i += 1;
 	WORD sum = 0;
 	for (size_t j = 0; j < strData.size(); j++)
 	{

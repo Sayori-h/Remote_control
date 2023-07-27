@@ -4,7 +4,8 @@
 #include "framework.h"
 #include <string>
 #include <vector>
-
+#include <list>
+#include <map>
 typedef struct MouseEvent {
 	MouseEvent() {
 		nAction = 0;
@@ -42,10 +43,11 @@ public:
 	std::string strData;//包的数据
 	WORD sSum;//和校验
 	//std::string strOut;//整个包的数据
+	HANDLE hEvent;
 	CPacket();
 	CPacket& operator=(const CPacket& pack);
 	~CPacket() {};
-	CPacket(WORD sCmd, const BYTE* pData, size_t nSize);
+	CPacket(WORD sCmd, const BYTE* pData, size_t nSize, HANDLE hEvent);
 	CPacket(const BYTE* pData, size_t& nSize);
 	CPacket(const CPacket& pack);
 	int pacSize();//包数据的大小
@@ -62,6 +64,8 @@ private:
 	~CClientSocket();
 	BOOL InitSockEnv();
 	static void releaseInstance();
+	static void threadEntry(void* arg);
+	void threadFunc();
 	//嵌套类
 	class CNewAndDel;
 	//成员属性
@@ -71,6 +75,9 @@ private:
 	static CNewAndDel m_newdel;
 	std::vector<char>m_buffer;
 	int m_nIP, m_nPort;//地址和端口
+	//list：可能应答多个包（包的数量抖动很剧烈，用vector不合适）
+	std::map<HANDLE, std::list<CPacket>> m_mapAck;
+	std::list<CPacket> m_lstSend;
 public:
 	bool initSocket();
 	int dealCommand();

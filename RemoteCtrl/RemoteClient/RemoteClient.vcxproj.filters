@@ -36,9 +36,6 @@
     <ClInclude Include="ClientSocket.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="StatusDlg.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="CWatchDialog.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -46,6 +43,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="CHuxlTool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="StatusDlg.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -62,9 +62,6 @@
     <ClCompile Include="ClientSocket.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="StatusDlg.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="CWatchDialog.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -72,6 +69,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="CHuxlTool.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="StatusDlg.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -211,7 +211,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	CClientController* pController = CClientController::getInstance();
 	pController->UpdateAddress(m_server_address, atoi((LPCTSTR)m_nPort));
 	UpdateData(FALSE);
-	m_dlgStatus.Create(IDD_DLG_STATUS, this);
+	m_dlgStatus.Create(IDD_DIALOG_S, this);
 	m_dlgStatus.ShowWindow(SW_HIDE);
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }

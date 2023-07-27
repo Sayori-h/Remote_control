@@ -3,7 +3,7 @@
 
 // CStatusDlg 对话框
 
-class CStatusDlg : public CDialogEx
+class CStatusDlg : public CDialog
 {
 	DECLARE_DYNAMIC(CStatusDlg)
 
@@ -13,7 +13,7 @@ public:
 
 // 对话框数据
 #ifdef AFX_DESIGN_TIME
-	enum { IDD = IDD_DLG_STATUS };
+	enum { IDD = IDD_DIALOG_S };
 #endif
 
 protected:

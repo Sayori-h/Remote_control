@@ -242,7 +242,7 @@ int CCommand::sendScreen() {
 	int nHeight = GetDeviceCaps(hScreen, VERTRES);
 	CImage screen;
 	screen.Create(nWidth, nHeight, nBitPerPixel);//为图像类创建与窗口DC相同大小的DC
-	BitBlt(screen.GetDC(), 0, 0, 1920, 1020/*跳过任务栏高度*/, hScreen, 0, 0, SRCCOPY);//将窗口DC图像复制到image
+	BitBlt(screen.GetDC(), 0, 0, nWidth, nHeight-20/*跳过任务栏高度*/, hScreen, 0, 0, SRCCOPY);//将窗口DC图像复制到image
 	ReleaseDC(NULL, hScreen);//释放DC资源<=>GetDC
 	HGLOBAL hMen = GlobalAlloc(GMEM_MOVEABLE, 0);
 	if (hMen == NULL)return -1;

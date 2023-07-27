@@ -64,7 +64,8 @@ bool CClientController::SendPacket(const CPacket& pack)
 int CClientController::SendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData, size_t nLength)
 {
 	if (gpClient->initSocket() == false)return false;
-	gpClient->sendCom(CPacket(nCmd,pData,nLength));	
+	HANDLE hEvent = CreateEvent(NULL,TRUE, FALSE, NULL);
+	gpClient->sendCom(CPacket(nCmd,pData,nLength,hEvent));	
 	int cmd = DealCommand();
 	TRACE("ack:%d\r\n", cmd);
 	if (bAutoClose)CloseSocket();
@@ -88,7 +89,7 @@ int CClientController::DownFile(CString& strPath)
 		m_hThreadDown=(HANDLE)_beginthread(&CClientController::threadEntryOfDownFile, 0, this);
 		if (WaitForSingleObject(m_hThreadDown, 0) != WAIT_TIMEOUT) return -1;
 		m_remoteDlg.BeginWaitCursor();
-		m_statusDlg.m_info.SetWindowText(_T("命令正在执行中!"));
+		//m_statusDlg.m_info.SetWindowText(_T("命令正在执行中!"));
 		m_statusDlg.ShowWindow(SW_SHOW);
 		m_statusDlg.CenterWindow(&m_remoteDlg);
 		m_statusDlg.SetActiveWindow();
@@ -134,8 +135,9 @@ void CClientController::threadWatchScreen()
 		if (m_watchDlg.isFull()==false) {
 			int ret=SendCommandPacket(6);
 			if (ret == 6) {
-				CImage image;
-				if (GetImage(m_remoteDlg.GetImage()) == 0) {
+				
+				//if (GetImage(m_remoteDlg.GetImage()) == 0) {
+				if (GetImage(m_watchDlg.m_image) == 0) {
 					m_watchDlg.SetImageStatus(true);
 				}
 				else TRACE("获取图片失败！%d\r\n",ret);
@@ -294,6 +296,10 @@ CClientController* CClientController::getInstance()
 int CClientController::InitController()
 {
 	m_hThread = (HANDLE)_beginthreadex(NULL, 0,&CClientController::threadEntry, this, 0, &m_nThreadID);
-	m_statusDlg.Create(IDD_DLG_STATUS, &m_remoteDlg);
+	int ret=m_statusDlg.Create(IDD_DIALOG_S, &m_remoteDlg);
+	if (!ret) {
+		TRACE("GetLastError %d\r\n", GetLastError());
+		//ret = m_test.Create(IDD_DIALOG1,&m_remoteDlg);
+	}
 	return 0;
 }
