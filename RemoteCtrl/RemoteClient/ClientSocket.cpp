@@ -23,7 +23,8 @@ CClientSocket::CClientSocket(const CClientSocket& ss)
 	m_nPort = ss.m_nPort;
 }
 
-CClientSocket::CClientSocket() :m_nIP(INADDR_ANY), m_nPort(0)
+CClientSocket::CClientSocket() :
+	m_nIP(INADDR_ANY), m_nPort(0),m_sock(INVALID_SOCKET)
 //无效IP和端口，防止连上
 {
 	m_sock = INVALID_SOCKET;
@@ -65,13 +66,13 @@ void CClientSocket::releaseInstance()
 
 void CClientSocket::threadEntry(void* arg)
 {
-	CClientSocket*thiz = (CClientSocket*)arg;
+	CClientSocket* thiz = (CClientSocket*)arg;
 	thiz->threadFunc();
 }
 
 void CClientSocket::threadFunc()
 {
-	if (initSocket() == false)return;
+	//if (initSocket() == false)return;
 	//send在外面，这里recv
 	std::string strBuffer;
 	strBuffer.resize(BUF_SIZE);
@@ -79,6 +80,7 @@ void CClientSocket::threadFunc()
 	int index = 0;
 	while (m_sock != INVALID_SOCKET) {
 		if (m_lstSend.size() > 0) {
+			TRACE("lstSend size:%d\r\n", m_lstSend.size());
 			CPacket& head = m_lstSend.front();//取到这个包
 			if (sendCom(head) == false) {
 				TRACE("发送失败！\r\n");
@@ -92,7 +94,7 @@ void CClientSocket::threadFunc()
 				index += length;
 				size_t size = (size_t)index;
 				CPacket pack((BYTE*)pBuffer, size);//解包
-				if (size>0) {//TODO:对于文件夹/文件信息获取会有问题
+				if (size > 0) {//TODO:对于文件夹/文件信息获取会有问题
 					pack.hEvent = head.hEvent;//让他能找得到自己
 					pr.first->second.push_back(pack);
 					SetEvent(head.hEvent);
@@ -101,8 +103,9 @@ void CClientSocket::threadFunc()
 			else if (length <= 0 && index <= 0) {
 				CloseSocket();
 			}
-					m_lstSend.pop_front();
+			m_lstSend.pop_front();
 		}
+		CloseSocket();
 	}
 }
 
@@ -196,6 +199,27 @@ CClientSocket* CClientSocket::getInstance()
 	}
 	return m_instance;
 }
+bool CClientSocket::SendPacket(const CPacket& pack, std::list<CPacket>& lstPacks)
+{
+	if (m_sock == INVALID_SOCKET) {
+		if(initSocket()==false)return false;
+		_beginthread(&CClientSocket::threadEntry, 0, this);
+	}
+	m_lstSend.push_back(pack);
+	WaitForSingleObject(pack.hEvent, INFINITE);
+	std::map<HANDLE, std::list<CPacket>>::iterator it;
+	it = m_mapAck.find(pack.hEvent);
+	if (it != m_mapAck.end()) {
+		std::list<CPacket>::iterator i;
+		for (i = it->second.begin(); i != it->second.end(); i++) {
+
+			lstPacks.push_back(*i);
+		}
+		m_mapAck.erase(it);
+		return true;
+	}
+	return false;
+}
 bool CClientSocket::getFilePath(std::string& strPath)
 {
 	if ((m_packet.sCmd >= 2) && (m_packet.sCmd <= 4))
@@ -227,8 +251,10 @@ void CClientSocket::CloseSocket()
 
 void CClientSocket::UpdateAddress(int nIP, int nPort)
 {
-	m_nIP = nIP;
-	m_nPort = nPort;
+	if ((m_nIP != nIP) || (m_nPort != nPort)) {
+		m_nIP = nIP;
+		m_nPort = nPort;
+	}
 }
 
 class CClientSocket::CNewAndDel {
@@ -264,7 +290,7 @@ CPacket& CPacket::operator=(const CPacket& pack)
 	return *this;
 }
 
-CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize,HANDLE hEvent)
+CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize, HANDLE hEvent)
 {
 	sHead = 0xFEFF;
 	nLength = nSize + 4;
@@ -287,7 +313,7 @@ CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize,HANDLE hEvent)
 
 //解包
 CPacket::CPacket(const BYTE* pData, size_t& nSize) :
-	sHead(0), nLength(0), sCmd(0), sSum(0),hEvent(INVALID_HANDLE_VALUE)
+	sHead(0), nLength(0), sCmd(0), sSum(0), hEvent(INVALID_HANDLE_VALUE)
 {
 	size_t i = 0;
 	for (; i < nSize; i++)

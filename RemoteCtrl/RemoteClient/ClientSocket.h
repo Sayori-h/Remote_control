@@ -66,6 +66,8 @@ private:
 	static void releaseInstance();
 	static void threadEntry(void* arg);
 	void threadFunc();
+	bool sendCom(const CPacket& pData);
+	bool sendCom(const char* pData, int nSize);
 	//嵌套类
 	class CNewAndDel;
 	//成员属性
@@ -81,9 +83,8 @@ private:
 public:
 	bool initSocket();
 	int dealCommand();
-	bool sendCom(const CPacket& pData);
-	bool sendCom(const char* pData, int nSize);
 	static CClientSocket* getInstance();
+	bool SendPacket(const CPacket& pack, std::list<CPacket>& lstPacks);
 	bool getFilePath(std::string& strPath);
 	bool getMouseEvent(MOUSEEV& mouse);
 	CPacket& GetPacket();
