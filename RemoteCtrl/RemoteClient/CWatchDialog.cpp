@@ -72,7 +72,7 @@ BOOL CWatchDialog::OnInitDialog()
 	m_isFull = false;
 	SetTimer(0, 40, NULL);
 	return TRUE;  // return TRUE unless you set the focus to a control 异常: OCX 属性页应返回 FALSE
-				  
+
 }
 
 
@@ -93,11 +93,14 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 			pParent->SetImageStatus();*/
 			//CImage image;
 			//pParent->GetImage(image);
-			if (m_nObjWidth == -1)m_nObjWidth = m_image.GetWidth();
-			if (m_nObjHeight == -1)m_nObjHeight = m_image.GetHeight();
+			/*if (m_nObjWidth != m_image.GetWidth())直接更新*/
+			m_nObjWidth = m_image.GetWidth();
+			/*if (m_nObjHeight != m_image.GetHeight())*/
+			m_nObjHeight = m_image.GetHeight();
 			m_image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0,
 				rect.Width(), rect.Height(), SRCCOPY);
 			m_picture.InvalidateRect(NULL);
+			TRACE("更新图片完成%d %d %08X\r\n", m_nObjWidth, m_nObjHeight, (HBITMAP)m_image);
 			m_image.Destroy();
 			m_isFull = false;
 		}
@@ -248,7 +251,6 @@ void CWatchDialog::OnMouseMove(UINT nFlags, CPoint point)
 		//CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
 		//pParent->SendMessage(WM_SEND_PACKET, 6 << 1 | 1, (WPARAM) & event);
 		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&event, sizeof(event));
-		// 问题你复现一下   你鼠标操作是有问题的，你服务器那边应该都没修改
 	}
 	CDialog::OnMouseMove(nFlags, point);
 }

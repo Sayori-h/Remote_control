@@ -31,6 +31,7 @@ LRESULT CClientController::SendMessage(MSG msg)
 	MSGINFO info(msg);
 	PostThreadMessage(m_nThreadID, WM_SEND_MESSAGE, (WPARAM)&info, (LPARAM)&hEvent);
 	WaitForSingleObject(hEvent, INFINITE);
+	CloseHandle(hEvent);
 	return info.result;
 }
 
@@ -55,26 +56,32 @@ void CClientController::CloseSocket()
 //	gpClient->sendCom(pack);
 //}
 
-int CClientController::SendCommandPacket(int nCmd, bool bAutoClose, 
-	BYTE* pData, size_t nLength, std::list<CPacket>*plstPacks)
+int CClientController::SendCommandPacket(int nCmd, bool bAutoClose,
+	BYTE* pData, size_t nLength, std::list<CPacket>* plstPacks/*应答结果：分为关心和不关心*/)
 {
+	TRACE("%s start %lld\r\n", __FUNCTION__, GetTickCount64());
+	/*你这个函数最后一个参数默认是null，你的鼠标事件发包没传这个参数，
+	所以他是null，你如果能保证每次调用这个函数最后一个参数都不是null，你就可以把这句删掉*/
 	//if (gpClient->initSocket() == false)return false;
-	HANDLE hEvent = CreateEvent(NULL,TRUE, FALSE, NULL);
-	//TODO:不应该直接发送，而是投入对列
-	std::list<CPacket>lstPacks;//应答结果包
-	if (plstPacks == NULL) {
+	HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	//TODO:不应该直接发送，而是投入队列
+	std::list<CPacket> lstPacks;//应答结果包
+	if (plstPacks == nullptr) {//不关心应答结果，只管发包
 		plstPacks = &lstPacks;
-	gpClient->SendPacket(CPacket(nCmd,pData,nLength,hEvent),*plstPacks);
 	}
-	if (plstPacks->size() > 0) {
+	gpClient->SendPacket(CPacket(nCmd, pData, nLength, hEvent), *plstPacks,bAutoClose);
+	CloseHandle(hEvent);//回收事件句柄，防止资源耗尽
+	if (plstPacks->size() > 0) {//关心应答结果
+		//他就会看一下你发的这个包的一个返回值，就是你的cmd
 		if (plstPacks->size() == 1) {//就一个包
+			TRACE("%s end %lld\r\n", __FUNCTION__, GetTickCount64());
 			return plstPacks->front().sCmd;
 		}
-		return -1;
 	}
 	//int cmd = DealCommand();
 	//TRACE("ack:%d\r\n", cmd);
 	//if (bAutoClose)CloseSocket();
+	TRACE("%s terminal %lld\r\n", __FUNCTION__, GetTickCount64());
 	return -1;
 }
 
@@ -92,7 +99,7 @@ int CClientController::DownFile(CString& strPath)
 		m_strLocal = dlg.GetPathName();
 		CString strLocal = dlg.GetPathName();
 		//线程处理函数
-		m_hThreadDown=(HANDLE)_beginthread(&CClientController::threadEntryOfDownFile, 0, this);
+		m_hThreadDown = (HANDLE)_beginthread(&CClientController::threadEntryOfDownFile, 0, this);
 		if (WaitForSingleObject(m_hThreadDown, 0) != WAIT_TIMEOUT) return -1;
 		m_remoteDlg.BeginWaitCursor();
 		//m_statusDlg.m_info.SetWindowText(_T("命令正在执行中!"));
@@ -138,15 +145,17 @@ void CClientController::threadWatchScreen()
 	Sleep(50);
 	while (!m_isClosed)
 	{
-		if (m_watchDlg.isFull()==false) {
-			std::list<CPacket> lstPacks;
-			int ret=SendCommandPacket(6,true,NULL,0,&lstPacks);
+		if (m_watchDlg.isFull() == false) {
+			std::list<CPacket> lstPacks;//应答结果包
+			int ret = SendCommandPacket(6, true, NULL, 0, &lstPacks);
 			if (ret == 6) {
 				//if (GetImage(m_remoteDlg.GetImage()) == 0) {
-				if (CHuxlTool::BytesToImage(m_remoteDlg.GetImage(),lstPacks.front().strData)== 0) {
+				if (CHuxlTool::BytesToImage(m_watchDlg.GetImage(), lstPacks.front().strData) == 0) {
 					m_watchDlg.SetImageStatus(true);
+					TRACE("成功设置图片 %08X\r\n", (HBITMAP)m_watchDlg.GetImage());
+					TRACE("和校验:%04X\r\n", lstPacks.front().sSum);
 				}
-				else TRACE("获取图片失败！%d\r\n",ret);
+				else TRACE("获取图片失败！%d\r\n", ret);
 			}
 		}
 		Sleep(1);
@@ -203,7 +212,7 @@ unsigned __stdcall CClientController::threadEntry(void* arg)
 void CClientController::threadDownFile()
 {
 	FILE* pFile = fopen(m_strLocal, "wb+");
-	if(!pFile){
+	if (!pFile) {
 		AfxMessageBox("本地没有权限保存该文件，或者文件无法创建");
 		m_statusDlg.ShowWindow(SW_HIDE);
 		m_remoteDlg.EndWaitCursor();
@@ -211,23 +220,23 @@ void CClientController::threadDownFile()
 	}
 	do
 	{
-	int ret=SendCommandPacket(4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength());
-	long long nLength = *(long long*)gpClient->GetPacket().strData.c_str();
-	if (nLength == 0) {
-		AfxMessageBox("文件长度为零或者无法读取文件！！！");
-		return;
-	}
-	long long nCount = 0;
-	while (nCount < nLength) {
-		ret = gpClient->dealCommand();
-		if (ret < 0) {
-			AfxMessageBox("传输失败！！");
-			TRACE("传输失败：ret =%d\r\n", ret);
-			break;
+		int ret = SendCommandPacket(4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength());
+		long long nLength = *(long long*)gpClient->GetPacket().strData.c_str();
+		if (nLength == 0) {
+			AfxMessageBox("文件长度为零或者无法读取文件！！！");
+			return;
 		}
-		fwrite(gpClient->GetPacket().strData.c_str(), 1, gpClient->GetPacket().strData.size(), pFile);
-		nCount += gpClient->GetPacket().strData.size();
-	}
+		long long nCount = 0;
+		while (nCount < nLength) {
+			ret = gpClient->dealCommand();
+			if (ret < 0) {
+				AfxMessageBox("传输失败！！");
+				TRACE("传输失败：ret =%d\r\n", ret);
+				break;
+			}
+			fwrite(gpClient->GetPacket().strData.c_str(), 1, gpClient->GetPacket().strData.size(), pFile);
+			nCount += gpClient->GetPacket().strData.size();
+		}
 	} while (false);
 	fclose(pFile);
 	gpClient->CloseSocket();
@@ -301,8 +310,8 @@ CClientController* CClientController::getInstance()
 
 int CClientController::InitController()
 {
-	m_hThread = (HANDLE)_beginthreadex(NULL, 0,&CClientController::threadEntry, this, 0, &m_nThreadID);
-	int ret=m_statusDlg.Create(IDD_DIALOG_S, &m_remoteDlg);
+	m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientController::threadEntry, this, 0, &m_nThreadID);
+	int ret = m_statusDlg.Create(IDD_DIALOG_S, &m_remoteDlg);
 	if (!ret) {
 		TRACE("GetLastError %d\r\n", GetLastError());
 		//ret = m_test.Create(IDD_DIALOG1,&m_remoteDlg);

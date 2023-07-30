@@ -42,7 +42,8 @@ public:
 	7、锁机			||   8、解锁
 	9、删除文件		||   2001、测试连接
 	返回值：是命令号，如果<0则错误*/
-	int SendCommandPacket(int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0, std::list<CPacket>*plstPacks=NULL);
+	int SendCommandPacket(int nCmd, bool bAutoClose = true, BYTE* pData = NULL, 
+		size_t nLength = 0, std::list<CPacket>* plstPacks=NULL/*不关心应答*/);
 	int GetImage(CImage& image);
 	int DownFile(CString& strPath);
 	void StartWatchScreen();

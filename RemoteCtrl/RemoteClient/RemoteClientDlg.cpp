@@ -98,38 +98,52 @@ void CRemoteClientDlg::LoadFileInfo()
 	DelTreeChildItem(hTreeSelected);//关闭其他未被点到的节点
 	m_List.DeleteAllItems();
 	CString strPath = GetPath(hTreeSelected);
-	int nCmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
-	PFILEINFO pInfo = (PFILEINFO)CClientController::getInstance()->GetPacket().strData.c_str();
-	int ccount = 0;
-	while (pInfo->hasNext)//过滤掉空目录
-	{
-		TRACE("[%s] isdir %d\r\n", pInfo->szFileName, pInfo->isDirectory);
-		if (pInfo->isDirectory)
-		{
-			if (CString(pInfo->szFileName) == "." || (CString(pInfo->szFileName) == "..")) {
-				//防止无限递归
-				int cmd = CClientController::getInstance()->DealCommand();
-				TRACE("ack:%d\r\n", cmd);
-				if (cmd < 0)break;
-				pInfo = (PFILEINFO)CClientController::getInstance()->GetPacket().strData.c_str();
-				continue;
+	std::list<CPacket> lstPack{};
+	int nCmd = CClientController::getInstance()->SendCommandPacket(2, false,
+		(BYTE*)(LPCTSTR)strPath, strPath.GetLength(), &lstPack);
+	//PFILEINFO pInfo = (PFILEINFO)CClientController::getInstance()->GetPacket().strData.c_str();
+	if (lstPack.size() > 0) {
+		std::list<CPacket>::iterator it = lstPack.begin();
+		for (; it != lstPack.end(); it++) {
+			PFILEINFO pInfo = (PFILEINFO)lstPack.front().strData.c_str();
+			if (pInfo->hasNext == FALSE)continue;
+			if (pInfo->isDirectory){
+				if (CString(pInfo->szFileName) == "." || (CString(pInfo->szFileName) == "..")) {
+					continue;
+				}
+				HTREEITEM hTemp = m_Tree.InsertItem(pInfo->szFileName, hTreeSelected, TVI_LAST);
+				//如果是目录，就有子节点;区分目录和文件，目录后面插NULL，文件不插
+				m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 			}
-			HTREEITEM hTemp = m_Tree.InsertItem(pInfo->szFileName, hTreeSelected, TVI_LAST);
-			//如果是目录，就有子节点;区分目录和文件，目录后面插NULL，文件不插
-			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
+			else m_List.InsertItem(0, pInfo->szFileName);//文件不在树上显示，树上只显示目录
 		}
-		else
-		{
-			m_List.InsertItem(0, pInfo->szFileName);//文件不在树上显示，树上只显示目录
-		}
-		ccount++;
-		int cmd = CClientController::getInstance()->DealCommand();
-		TRACE("ack:%d\r\n", cmd);
-		if (cmd < 0)break;
-		pInfo = (PFILEINFO)CClientController::getInstance()->GetPacket().strData.c_str();
 	}
-	CClientController::getInstance()->CloseSocket();
-	TRACE("ccount=%d\r\n", ccount);
+	//int ccount = 0;
+	//while (pInfo->hasNext)//过滤掉空目录
+	//{
+	//	TRACE("[%s] isdir %d\r\n", pInfo->szFileName, pInfo->isDirectory);
+	//	if (pInfo->isDirectory) {
+	//		if (CString(pInfo->szFileName) == "." || (CString(pInfo->szFileName) == "..")) {
+	//			//防止无限递归
+	//			int cmd = CClientController::getInstance()->DealCommand();
+	//			TRACE("ack:%d\r\n", cmd);
+	//			if (cmd < 0)break;
+	//			pInfo = (PFILEINFO)CClientController::getInstance()->GetPacket().strData.c_str();
+	//			continue;
+	//		}
+	//		HTREEITEM hTemp = m_Tree.InsertItem(pInfo->szFileName, hTreeSelected, TVI_LAST);
+	//		//如果是目录，就有子节点;区分目录和文件，目录后面插NULL，文件不插
+	//		m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
+	//	}
+	//	else m_List.InsertItem(0, pInfo->szFileName);//文件不在树上显示，树上只显示目录	
+	//	ccount++;
+	//	int cmd = CClientController::getInstance()->DealCommand();
+	//	TRACE("ack:%d\r\n", cmd);
+	//	if (cmd < 0)break;
+	//	pInfo = (PFILEINFO)CClientController::getInstance()->GetPacket().strData.c_str();
+	//}
+	//CClientController::getInstance()->CloseSocket();
+	//TRACE("ccount=%d\r\n", ccount);
 }
 
 void CRemoteClientDlg::LoadCurInfo()
@@ -151,7 +165,7 @@ void CRemoteClientDlg::LoadCurInfo()
 		if (cmd < 0)break;
 		pInfo = (PFILEINFO)CClientController::getInstance()->GetPacket().strData.c_str();
 	}
-	CClientController::getInstance()->CloseSocket();
+	//CClientController::getInstance()->CloseSocket();
 }
 
 
@@ -272,13 +286,15 @@ void CRemoteClientDlg::OnBnClickedBtnTest()
 
 void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 {
-	int ret = CClientController::getInstance()->SendCommandPacket(1);
-	if (ret == -1)
+	std::list<CPacket> lstPackets{};
+	int ret = CClientController::getInstance()->SendCommandPacket(1, true, 0, 0, &lstPackets);
+	if (ret == -1 || (lstPackets.size() <= 0))
 	{
 		AfxMessageBox(_T("命令处理失败!!!"));
 		return;
 	}
-	std::string drivers = gpClient->GetPacket().strData;
+	//std::string drivers = gpClient->GetPacket().strData;
+	std::string drivers = lstPackets.front().strData;
 	std::string dr;
 	m_Tree.DeleteAllItems();
 	for (size_t i = 0; i < drivers.size(); i++)
@@ -338,7 +354,7 @@ void CRemoteClientDlg::OnDownloadFile()
 	CString strFile = m_List.GetItemText(nListSelected, 0);//获取文件名
 	HTREEITEM hSelected = m_Tree.GetSelectedItem();
 	strFile = GetPath(hSelected) + strFile;//获取文件路径
-	int ret=CClientController::getInstance()->DownFile(strFile);
+	int ret = CClientController::getInstance()->DownFile(strFile);
 	if (ret) {
 		MessageBox(_T("下载失败!"));
 		TRACE("下载失败 ret=%d\r\n", ret);

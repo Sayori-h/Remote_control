@@ -43,7 +43,7 @@ public:
 	std::string strData;//包的数据
 	WORD sSum;//和校验
 	//std::string strOut;//整个包的数据
-	HANDLE hEvent;
+	HANDLE hEvent;//方便发送数据时弄得
 	CPacket();
 	CPacket& operator=(const CPacket& pack);
 	~CPacket() {};
@@ -54,6 +54,7 @@ public:
 	const char* pacData(std::string& strOut) const;//包的数据的内容
 };
 #pragma pack(pop)
+#include <mutex>
 class CClientSocket
 {
 private:
@@ -77,14 +78,18 @@ private:
 	static CNewAndDel m_newdel;
 	std::vector<char>m_buffer;
 	int m_nIP, m_nPort;//地址和端口
-	//list：可能应答多个包（包的数量抖动很剧烈，用vector不合适）
-	std::map<HANDLE, std::list<CPacket>> m_mapAck;
-	std::list<CPacket> m_lstSend;
+	//list：要获取对方应答的包，对方可能应答多个包（包的数量抖动很剧烈，用vector不合适）
+	std::map<HANDLE/*哪个命令*/, std::list<CPacket>&> m_mapAck;
+	std::map<HANDLE, bool> m_mapAutoClosed;
+	std::list<CPacket> m_lstSend;//要发送的数据
+	bool m_bAutoClose;
+	std::mutex m_lock;
+	
 public:
 	bool initSocket();
 	int dealCommand();
 	static CClientSocket* getInstance();
-	bool SendPacket(const CPacket& pack, std::list<CPacket>& lstPacks);
+	bool SendPacket(const CPacket& pack, std::list<CPacket>& lstPacks, bool isAutoClose = true);
 	bool getFilePath(std::string& strPath);
 	bool getMouseEvent(MOUSEEV& mouse);
 	CPacket& GetPacket();
