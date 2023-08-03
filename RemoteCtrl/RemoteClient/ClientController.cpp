@@ -157,9 +157,11 @@ void CClientController::threadWatchScreen()
 				}
 				else TRACE("ªÒ»°Õº∆¨ ß∞‹£°%d\r\n", ret);
 			}
+			else TRACE("ªÒ»°Õº∆¨ ß∞‹£°%d\r\n", ret);
 		}
 		Sleep(1);
 	}
+	TRACE("thread end %d\r\n", m_isClosed);
 }
 
 void CClientController::threadWatchScreen(void* arg)

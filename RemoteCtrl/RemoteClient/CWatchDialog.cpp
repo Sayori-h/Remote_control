@@ -85,17 +85,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 		{
 			CRect rect;
 			m_picture.GetWindowRect(rect);
-			/*pParent->GetImage().BitBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, SRCCOPY);
-			调整图像大小
-			pParent->GetImage()
-			m_picture.InvalidateRect(NULL);
-			pParent->GetImage().Destroy();
-			pParent->SetImageStatus();*/
-			//CImage image;
-			//pParent->GetImage(image);
-			/*if (m_nObjWidth != m_image.GetWidth())直接更新*/
 			m_nObjWidth = m_image.GetWidth();
-			/*if (m_nObjHeight != m_image.GetHeight())*/
 			m_nObjHeight = m_image.GetHeight();
 			m_image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0,
 				rect.Width(), rect.Height(), SRCCOPY);

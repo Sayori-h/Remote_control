@@ -84,6 +84,7 @@ private:
 	std::list<CPacket> m_lstSend;//要发送的数据
 	bool m_bAutoClose;
 	std::mutex m_lock;
+	HANDLE m_hThread;
 	
 public:
 	bool initSocket();
