@@ -6,6 +6,8 @@
 #include <vector>
 #include <list>
 #include <map>
+
+#define WM_SEND_PACK    (WM_USER + 1)//发送包数据
 typedef struct MouseEvent {
 	MouseEvent() {
 		nAction = 0;
@@ -67,8 +69,10 @@ private:
 	static void releaseInstance();
 	static void threadEntry(void* arg);
 	void threadFunc();
+	void threadFunc2();
 	bool sendCom(const CPacket& pData);
 	bool sendCom(const char* pData, int nSize);
+	void SendPack(UINT nMsg, WPARAM wParam/*缓冲区的值*/, LPARAM lParam/*缓冲区的长度*/);
 	//嵌套类
 	class CNewAndDel;
 	//成员属性
@@ -85,6 +89,8 @@ private:
 	bool m_bAutoClose;
 	std::mutex m_lock;
 	HANDLE m_hThread;
+	typedef void(CClientSocket::* MSGFUNC)(UINT nMsg, WPARAM wParam, LPARAM lParam);
+	std::map<UINT, MSGFUNC>m_mapFunc;
 	
 public:
 	bool initSocket();

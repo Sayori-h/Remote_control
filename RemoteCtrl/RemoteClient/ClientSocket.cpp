@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "ClientSocket.h"
-#define BUF_SIZE 409600000
+#define BUF_SIZE 100*1024*1024
 
 std::string GetErrInfo(int wsaErrorCode) {
 	LPVOID lpMsgBuf = NULL;
@@ -19,10 +19,24 @@ std::string GetErrInfo(int wsaErrorCode) {
 
 CClientSocket::CClientSocket(const CClientSocket& ss)
 {
+	m_hThread = INVALID_HANDLE_VALUE;
 	m_bAutoClose = ss.m_bAutoClose;
 	m_sock = ss.m_sock;
 	m_nIP = ss.m_nIP;
 	m_nPort = ss.m_nPort;
+	struct {
+		UINT message;
+		MSGFUNC func;
+	}funcs[] = {
+		{WM_SEND_PACK,&CClientSocket::SendPack},
+		//{WM_SEND_PACK},
+		{0,NULL}
+	};
+	for (int i = 0; funcs[i].message; i++) {
+		if (m_mapFunc.insert(std::pair<UINT, MSGFUNC>(funcs[i].message, funcs[i].func)).second == false) {
+			TRACE("插入失败，消息值：%d 函数值：%08x 序号：%d\r\n", funcs[i].message, funcs[i].func, i);
+		}
+	}
 }
 
 CClientSocket::CClientSocket() :
@@ -116,20 +130,38 @@ void CClientSocket::threadFunc()
 					else if (length <= 0 && index <= 0) {
 						CloseSocket();
 						SetEvent(head.hEvent);//等到服务器关闭命令之后，再通知事情完成
-						m_mapAutoClosed.erase(it0);
-						TRACE("SetEvent %d %d\r\n", head.sCmd,it0->second);
+						if (it0 != m_mapAutoClosed.end()) {
+							TRACE("SetEvent %d %d\r\n", head.sCmd, it0->second);
+						}
+						else {
+							TRACE("异常的情况，没有对应的pair对!\r\n");
+						}
 						break;
 					}
 				} while (it0->second == false||index>0);
 			}
 			m_lock.lock();
 			m_lstSend.pop_front();
+			m_mapAutoClosed.erase(head.hEvent);
 			m_lock.unlock();
 			if (initSocket() == false)initSocket();
 		}
 		Sleep(1);
 	}
 	CloseSocket();
+}
+
+void CClientSocket::threadFunc2()
+{
+	MSG msg;
+	while (::GetMessage(&msg, NULL, 0, 0)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+		if (m_mapFunc.find(msg.message) != m_mapFunc.end()) {
+			(this->*m_mapFunc[msg.message])(msg.message, msg.wParam, msg.lParam);
+
+		}
+	}
 }
 
 bool CClientSocket::initSocket()
@@ -212,6 +244,25 @@ bool CClientSocket::sendCom(const char* pData, int nSize)
 {
 	if (m_sock == -1)return false;
 	return send(m_sock, pData, nSize, 0) > 0;
+}
+
+void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
+{//TODO:定义一个消息的数据结构(数据和数据长度，模式：是接到一个应答包就结束还是多个应答包)
+	//回调消息的数据结构（HWND:窗口句柄 MESSAGE:回调什么消息))
+	if (initSocket() == true) {
+		int ret = send(m_sock, (char*)wParam, (int)lParam, 0);
+		if (ret > 0) {
+
+		}
+		else {
+			CloseSocket();
+			//网络终止处理
+		}
+	}
+	else {
+		//TODO:错误处理
+
+	}
 }
 
 CClientSocket* CClientSocket::getInstance()
