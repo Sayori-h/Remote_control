@@ -56,33 +56,32 @@ void CClientController::CloseSocket()
 //	gpClient->sendCom(pack);
 //}
 
-int CClientController::SendCommandPacket(int nCmd, bool bAutoClose,
-	BYTE* pData, size_t nLength, std::list<CPacket>* plstPacks/*应答结果：分为关心和不关心*/)
+bool CClientController::SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose,
+	BYTE* pData, size_t nLength/*, std::list<CPacket>* plstPacks应答结果：分为关心和不关心*/)
 {
 	TRACE("%s start %lld\r\n", __FUNCTION__, GetTickCount64());
 	/*你这个函数最后一个参数默认是null，你的鼠标事件发包没传这个参数，
 	所以他是null，你如果能保证每次调用这个函数最后一个参数都不是null，你就可以把这句删掉*/
 	//if (gpClient->initSocket() == false)return false;
-	HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	//HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 	//TODO:不应该直接发送，而是投入队列
-	std::list<CPacket> lstPacks;//应答结果包
-	if (plstPacks == nullptr) {//不关心应答结果，只管发包
-		plstPacks = &lstPacks;
-	}
-	gpClient->SendPacket(CPacket(nCmd, pData, nLength, hEvent), *plstPacks,bAutoClose);
-	CloseHandle(hEvent);//回收事件句柄，防止资源耗尽
-	if (plstPacks->size() > 0) {//关心应答结果
-		//他就会看一下你发的这个包的一个返回值，就是你的cmd
-		if (plstPacks->size() == 1) {//就一个包
-			TRACE("%s end %lld\r\n", __FUNCTION__, GetTickCount64());
-			return plstPacks->front().sCmd;
-		}
-	}
+	//std::list<CPacket> lstPacks;//应答结果包
+	//if (plstPacks == nullptr) {//不关心应答结果，只管发包
+	//	plstPacks = &lstPacks;
+	//}
+	//TRACE("%s terminal %lld\r\n", __FUNCTION__, GetTickCount64());
+	return gpClient->SendPacket(hWnd,CPacket(nCmd, pData, nLength),bAutoClose);
+	//CloseHandle(hEvent);//回收事件句柄，防止资源耗尽
+	//if (plstPacks->size() > 0) {//关心应答结果
+	//	//他就会看一下你发的这个包的一个返回值，就是你的cmd
+	//	if (plstPacks->size() == 1) {//就一个包
+	//		TRACE("%s end %lld\r\n", __FUNCTION__, GetTickCount64());
+	//		return plstPacks->front().sCmd;
+	//	}
+	//}
 	//int cmd = DealCommand();
 	//TRACE("ack:%d\r\n", cmd);
 	//if (bAutoClose)CloseSocket();
-	TRACE("%s terminal %lld\r\n", __FUNCTION__, GetTickCount64());
-	return -1;
 }
 
 int CClientController::GetImage(CImage& image)
@@ -141,13 +140,16 @@ CClientController::~CClientController()
 }
 
 void CClientController::threadWatchScreen()
+
 {
 	Sleep(50);
 	while (!m_isClosed)
 	{
 		if (m_watchDlg.isFull() == false) {
 			std::list<CPacket> lstPacks;//应答结果包
-			int ret = SendCommandPacket(6, true, NULL, 0, &lstPacks);
+			int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(),6, true, NULL, 0);
+			//TODO:添加消息响应函数WM_SEND_PACK_ACK
+			//TODO:控制发送频率
 			if (ret == 6) {
 				//if (GetImage(m_remoteDlg.GetImage()) == 0) {
 				if (CHuxlTool::BytesToImage(m_watchDlg.GetImage(), lstPacks.front().strData) == 0) {
@@ -222,7 +224,7 @@ void CClientController::threadDownFile()
 	}
 	do
 	{
-		int ret = SendCommandPacket(4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength());
+		int ret = SendCommandPacket(m_remoteDlg,4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength());
 		long long nLength = *(long long*)gpClient->GetPacket().strData.c_str();
 		if (nLength == 0) {
 			AfxMessageBox("文件长度为零或者无法读取文件！！！");

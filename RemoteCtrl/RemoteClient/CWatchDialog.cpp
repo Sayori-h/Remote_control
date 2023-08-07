@@ -110,7 +110,7 @@ void CWatchDialog::OnLButtonDblClk(UINT nFlags, CPoint point)
 		event.ptXY = remote;
 		event.nButton = 0;//left
 		event.nAction = 1;//double click
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&event, sizeof(event));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),5, true, (BYTE*)&event, sizeof(event));
 		//CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent(); // TODO:存在一个设计隐患,网络通信和对话框有藕合
 		//pParent->SendMessage(WM_SEND_PACKET, 5 << 1 | 1, (WPARAM) & event);
 	}
@@ -132,7 +132,7 @@ void CWatchDialog::OnLButtonDown(UINT nFlags, CPoint point)
 		event.nAction = 2;//down
 		//CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
 		//pParent->SendMessage(WM_SEND_PACKET, 5 << 1 | 1, (WPARAM) & event);
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&event, sizeof(event));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&event, sizeof(event));
 	}
 	CDialog::OnLButtonDown(nFlags, point);
 }
@@ -150,7 +150,7 @@ void CWatchDialog::OnLButtonUp(UINT nFlags, CPoint point)
 		event.nAction = 3;//up
 		//CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
 		//pParent->SendMessage(WM_SEND_PACKET, 5 << 1 | 1, (WPARAM) & event);
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&event, sizeof(event));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&event, sizeof(event));
 	}
 	CDialog::OnLButtonUp(nFlags, point);
 }
@@ -168,7 +168,7 @@ void CWatchDialog::OnRButtonDblClk(UINT nFlags, CPoint point)
 		event.nAction = 1;//double click
 		//CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
 		//pParent->SendMessage(WM_SEND_PACKET, 5 << 1 | 1, (WPARAM) & event);
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&event, sizeof(event));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&event, sizeof(event));
 	}
 	CDialog::OnRButtonDblClk(nFlags, point);
 }
@@ -186,7 +186,7 @@ void CWatchDialog::OnRButtonDown(UINT nFlags, CPoint point)
 		event.nAction = 2;//down
 		//CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
 		//pParent->SendMessage(WM_SEND_PACKET, 5 << 1 | 1, (WPARAM) & event);
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&event, sizeof(event));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&event, sizeof(event));
 	}
 	CDialog::OnRButtonDown(nFlags, point);
 }
@@ -204,7 +204,7 @@ void CWatchDialog::OnRButtonUp(UINT nFlags, CPoint point)
 		event.nAction = 3;//up
 		//CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
 		//pParent->SendMessage(WM_SEND_PACKET, 5 << 1 | 1, (WPARAM) & event);
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&event, sizeof(event));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&event, sizeof(event));
 	}
 	CDialog::OnRButtonUp(nFlags, point);
 }
@@ -224,7 +224,7 @@ void CWatchDialog::OnStnClickedWatch()
 		event.nAction = 0;//click
 		//CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
 		//pParent->SendMessage(WM_SEND_PACKET, 5 << 1 | 1, (WPARAM) & event);
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&event, sizeof(event));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&event, sizeof(event));
 	}
 }
 
@@ -241,7 +241,7 @@ void CWatchDialog::OnMouseMove(UINT nFlags, CPoint point)
 		event.nAction = 0;//移动
 		//CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
 		//pParent->SendMessage(WM_SEND_PACKET, 6 << 1 | 1, (WPARAM) & event);
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&event, sizeof(event));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&event, sizeof(event));
 	}
 	CDialog::OnMouseMove(nFlags, point);
 }
@@ -251,7 +251,7 @@ void CWatchDialog::OnBnClickedBtnLock()
 {
 	//CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
 	//pParent->SendMessage(WM_SEND_PACKET, 7 << 1 | 1);
-	CClientController::getInstance()->SendCommandPacket(7);
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 7);
 }
 
 
@@ -259,5 +259,5 @@ void CWatchDialog::OnBnClickedBtnUnlock()
 {
 	//CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
 	//pParent->SendMessage(WM_SEND_PACKET, 8 << 1 | 1);
-	CClientController::getInstance()->SendCommandPacket(8);
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 8);
 }

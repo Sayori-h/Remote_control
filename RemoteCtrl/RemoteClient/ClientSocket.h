@@ -7,7 +7,8 @@
 #include <list>
 #include <map>
 
-#define WM_SEND_PACK    (WM_USER + 1)//发送包数据
+#define WM_SEND_PACK     (WM_USER + 1)//发送包数据
+#define WM_SEND_PACK_ACK (WM_USER + 2)//发送包数据应答
 typedef struct MouseEvent {
 	MouseEvent() {
 		nAction = 0;
@@ -33,6 +34,30 @@ typedef struct file_info {
 	char szFileName[256];//文件名
 }FILEINFO, * PFILEINFO;
 
+enum {//模式
+	CSM_AUTOCLOSE = 1,//CSM Client Socket Mode 自动关闭模式
+};
+
+typedef struct PacketData {
+	std::string strData;//数据
+	UINT nMode;//模式
+	PacketData(const char* pData, size_t nLen, UINT mode) {
+		strData.resize(nLen);
+		memcpy((char*)strData.c_str(), pData, nLen);
+		nMode = mode;
+	}
+	PacketData(const PacketData& data) {
+		strData = data.strData;
+		nMode = data.nMode;
+	}
+	PacketData& operator=(const PacketData& data) {
+		if (this != &data) {
+			strData = data.strData;
+			nMode = data.nMode;
+		}
+		return *this;
+	}
+}PACKET_DATA;
 #pragma pack(push)
 #pragma pack(1)
 class CPacket
@@ -45,11 +70,11 @@ public:
 	std::string strData;//包的数据
 	WORD sSum;//和校验
 	//std::string strOut;//整个包的数据
-	HANDLE hEvent;//方便发送数据时弄得
+	//HANDLE hEvent;//方便发送数据时弄得
 	CPacket();
 	CPacket& operator=(const CPacket& pack);
 	~CPacket() {};
-	CPacket(WORD sCmd, const BYTE* pData, size_t nSize, HANDLE hEvent);
+	CPacket(WORD sCmd, const BYTE* pData, size_t nSize/*HANDLE hEvent*/);
 	CPacket(const BYTE* pData, size_t& nSize);
 	CPacket(const CPacket& pack);
 	int pacSize();//包数据的大小
@@ -67,8 +92,8 @@ private:
 	~CClientSocket();
 	BOOL InitSockEnv();
 	static void releaseInstance();
-	static void threadEntry(void* arg);
-	void threadFunc();
+	static unsigned __stdcall threadEntry(void* arg);
+	//void threadFunc();
 	void threadFunc2();
 	bool sendCom(const CPacket& pData);
 	bool sendCom(const char* pData, int nSize);
@@ -91,12 +116,13 @@ private:
 	HANDLE m_hThread;
 	typedef void(CClientSocket::* MSGFUNC)(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	std::map<UINT, MSGFUNC>m_mapFunc;
-	
+	UINT m_nThreadID;
 public:
 	bool initSocket();
 	int dealCommand();
 	static CClientSocket* getInstance();
-	bool SendPacket(const CPacket& pack, std::list<CPacket>& lstPacks, bool isAutoClose = true);
+	//bool SendPacket(const CPacket& pack, std::list<CPacket>& lstPacks, bool isAutoClose = true);
+	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed=true);
 	bool getFilePath(std::string& strPath);
 	bool getMouseEvent(MOUSEEV& mouse);
 	CPacket& GetPacket();
