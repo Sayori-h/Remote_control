@@ -3,7 +3,6 @@
 #include "CWatchDialog.h"
 #include "StatusDlg.h"
 #include "resource.h"
-#include "ClientSocket.h"
 #include "RemoteClientDlg.h"
 #include "CHuxlTool.h"
 #include <map>
@@ -41,12 +40,14 @@ public:
 	7、锁机			||   8、解锁
 	9、删除文件		||   2001、测试连接
 	返回值：是状态，true是成功，false是失败*/
-	bool SendCommandPacket(HWND hWnd/*数据包收到后，需要应答的窗口*/, int nCmd, 
+	bool SendCommandPacket(HWND hWnd/*数据包收到后，需要应答的窗口*/, int nCmd,
 		bool bAutoClose = true, BYTE* pData = NULL,
-		size_t nLength = 0
+		size_t nLength = 0,
+		WPARAM wParam = 0
 		/*std::list<CPacket>* plstPacks=NULL不关心应答
 		应答通过发消息，不再需要队列*/);
 	int GetImage(CImage& image);
+	void DownloadEnd();
 	int DownFile(CString& strPath);
 	void StartWatchScreen();
 protected:

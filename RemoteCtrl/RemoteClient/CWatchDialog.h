@@ -1,4 +1,7 @@
 ﻿#pragma once
+#ifndef WM_SEND_PACK_ACK
+#define WM_SEND_PACK_ACK (WM_USER+2);
+#endif // !WM_SEND_PACK_ACK
 
 
 // CWatchDialog 对话框
@@ -47,4 +50,5 @@ public:
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnBnClickedBtnLock();
 	afx_msg void OnBnClickedBtnUnlock();
+	afx_msg LRESULT OnSendPackAck(WPARAM wParam,LPARAM lParam);
 };

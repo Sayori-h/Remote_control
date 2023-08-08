@@ -57,7 +57,7 @@ void CClientController::CloseSocket()
 //}
 
 bool CClientController::SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose,
-	BYTE* pData, size_t nLength/*, std::list<CPacket>* plstPacks应答结果：分为关心和不关心*/)
+	BYTE* pData, size_t nLength,WPARAM wParam/*, std::list<CPacket>* plstPacks应答结果：分为关心和不关心*/)
 {
 	TRACE("%s start %lld\r\n", __FUNCTION__, GetTickCount64());
 	/*你这个函数最后一个参数默认是null，你的鼠标事件发包没传这个参数，
@@ -70,7 +70,7 @@ bool CClientController::SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose,
 	//	plstPacks = &lstPacks;
 	//}
 	//TRACE("%s terminal %lld\r\n", __FUNCTION__, GetTickCount64());
-	return gpClient->SendPacket(hWnd,CPacket(nCmd, pData, nLength),bAutoClose);
+	return gpClient->SendPacket(hWnd,CPacket(nCmd, pData, nLength),bAutoClose,wParam);
 	//CloseHandle(hEvent);//回收事件句柄，防止资源耗尽
 	//if (plstPacks->size() > 0) {//关心应答结果
 	//	//他就会看一下你发的这个包的一个返回值，就是你的cmd
@@ -89,6 +89,13 @@ int CClientController::GetImage(CImage& image)
 	return CHuxlTool::BytesToImage(image, gpClient->GetPacket().strData);
 }
 
+void CClientController::DownloadEnd()
+{
+	m_statusDlg.ShowWindow(SW_HIDE);
+	m_remoteDlg.EndWaitCursor();
+	m_remoteDlg.MessageBox(_T("下载完成！！"), _T("完成"));
+}
+
 int CClientController::DownFile(CString& strPath)
 {
 	CFileDialog dlg(FALSE, NULL, strPath,
@@ -96,12 +103,18 @@ int CClientController::DownFile(CString& strPath)
 	if (dlg.DoModal() == IDOK) {
 		m_strRemote = strPath;
 		m_strLocal = dlg.GetPathName();
-		CString strLocal = dlg.GetPathName();
+		FILE* pFile = fopen(m_strLocal, "wb+");
+		if (!pFile) {
+			AfxMessageBox("本地没有权限保存该文件，或者文件无法创建");
+			return -1;
+		}
+		SendCommandPacket(m_remoteDlg, 4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength(), (WPARAM)pFile);
+		//CString strLocal = dlg.GetPathName();
 		//线程处理函数
-		m_hThreadDown = (HANDLE)_beginthread(&CClientController::threadEntryOfDownFile, 0, this);
-		if (WaitForSingleObject(m_hThreadDown, 0) != WAIT_TIMEOUT) return -1;
+		/*m_hThreadDown = (HANDLE)_beginthread(&CClientController::threadEntryOfDownFile, 0, this);
+		if (WaitForSingleObject(m_hThreadDown, 0) != WAIT_TIMEOUT) return -1;*/
 		m_remoteDlg.BeginWaitCursor();
-		//m_statusDlg.m_info.SetWindowText(_T("命令正在执行中!"));
+		m_statusDlg.m_info.SetWindowText(_T("命令正在执行中!"));
 		m_statusDlg.ShowWindow(SW_SHOW);
 		m_statusDlg.CenterWindow(&m_remoteDlg);
 		m_statusDlg.SetActiveWindow();
@@ -224,7 +237,7 @@ void CClientController::threadDownFile()
 	}
 	do
 	{
-		int ret = SendCommandPacket(m_remoteDlg,4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength());
+		int ret = SendCommandPacket(m_remoteDlg,4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength(),(WPARAM)pFile);
 		long long nLength = *(long long*)gpClient->GetPacket().strData.c_str();
 		if (nLength == 0) {
 			AfxMessageBox("文件长度为零或者无法读取文件！！！");

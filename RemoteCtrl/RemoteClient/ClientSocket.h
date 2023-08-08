@@ -41,19 +41,23 @@ enum {//模式
 typedef struct PacketData {
 	std::string strData;//数据
 	UINT nMode;//模式
-	PacketData(const char* pData, size_t nLen, UINT mode) {
+	WPARAM wParam;
+	PacketData(const char* pData, size_t nLen, UINT mode,WPARAM nParam=0) {
 		strData.resize(nLen);
 		memcpy((char*)strData.c_str(), pData, nLen);
 		nMode = mode;
+		wParam = nParam;
 	}
 	PacketData(const PacketData& data) {
 		strData = data.strData;
 		nMode = data.nMode;
+		wParam = data.wParam;
 	}
 	PacketData& operator=(const PacketData& data) {
 		if (this != &data) {
 			strData = data.strData;
 			nMode = data.nMode;
+			wParam = data.wParam;
 		}
 		return *this;
 	}
@@ -122,7 +126,7 @@ public:
 	int dealCommand();
 	static CClientSocket* getInstance();
 	//bool SendPacket(const CPacket& pack, std::list<CPacket>& lstPacks, bool isAutoClose = true);
-	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed=true);
+	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed=true,WPARAM wParam=0);
 	bool getFilePath(std::string& strPath);
 	bool getMouseEvent(MOUSEEV& mouse);
 	CPacket& GetPacket();

@@ -5,10 +5,12 @@
 #pragma once
 #include "RemoteClient.h"
 #include "afxdialogex.h"
-#include "CWatchDialog.h"
 #include "ClientSocket.h"
+#include "CWatchDialog.h"
 #include "StatusDlg.h"
-
+#ifndef WM_SEND_PACK_ACK
+#define WM_SEND_PACK_ACK (WM_USER+2);
+#endif // !WM_SEND_PACK_ACK
 //class CClientController;
 
 //#define WM_SEND_PACKET (WM_USER+1)//发送数据包消息，自定义消息①
@@ -72,4 +74,5 @@ public:
 	afx_msg void OnBnClickedBtnStartWatch();
 	afx_msg void OnIpnFieldchangedIpaddressServ(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnEnChangeEditPort();
+	afx_msg LRESULT OnSendPackAck(WPARAM wParam, LPARAM lParam);
 };
