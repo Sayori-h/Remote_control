@@ -60,8 +60,8 @@ bool CClientController::SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose,
 	BYTE* pData, size_t nLength,WPARAM wParam/*, std::list<CPacket>* plstPacks应答结果：分为关心和不关心*/)
 {
 	TRACE("%s start %lld\r\n", __FUNCTION__, GetTickCount64());
-	/*你这个函数最后一个参数默认是null，你的鼠标事件发包没传这个参数，
-	所以他是null，你如果能保证每次调用这个函数最后一个参数都不是null，你就可以把这句删掉*/
+	//你这个函数最后一个参数默认是null，你的鼠标事件发包没传这个参数，
+	//所以他是null，你如果能保证每次调用这个函数最后一个参数都不是null，你就可以把这句删掉
 	//if (gpClient->initSocket() == false)return false;
 	//HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 	//TODO:不应该直接发送，而是投入队列
@@ -70,7 +70,7 @@ bool CClientController::SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose,
 	//	plstPacks = &lstPacks;
 	//}
 	//TRACE("%s terminal %lld\r\n", __FUNCTION__, GetTickCount64());
-	return gpClient->SendPacket(hWnd,CPacket(nCmd, pData, nLength),bAutoClose,wParam);
+	bool ret=gpClient->SendPacket(hWnd,CPacket(nCmd, pData, nLength),bAutoClose,wParam);
 	//CloseHandle(hEvent);//回收事件句柄，防止资源耗尽
 	//if (plstPacks->size() > 0) {//关心应答结果
 	//	//他就会看一下你发的这个包的一个返回值，就是你的cmd
@@ -82,6 +82,11 @@ bool CClientController::SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose,
 	//int cmd = DealCommand();
 	//TRACE("ack:%d\r\n", cmd);
 	//if (bAutoClose)CloseSocket();
+	if (!ret) {
+		Sleep(30);
+		ret=gpClient->SendPacket(hWnd,CPacket(nCmd, pData, nLength),bAutoClose,wParam);
+	}
+	return ret;
 }
 
 int CClientController::GetImage(CImage& image)

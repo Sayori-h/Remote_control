@@ -121,6 +121,7 @@ private:
 	typedef void(CClientSocket::* MSGFUNC)(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	std::map<UINT, MSGFUNC>m_mapFunc;
 	UINT m_nThreadID;
+	HANDLE m_eventInvoke;//Æô¶¯ÊÂ¼þ
 public:
 	bool initSocket();
 	int dealCommand();

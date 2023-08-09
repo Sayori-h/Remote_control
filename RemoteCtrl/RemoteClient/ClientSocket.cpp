@@ -40,6 +40,12 @@ CClientSocket::CClientSocket() :
 		MessageBox(NULL, _T("初始化WinSock库失败！"), _T("错误"), MB_OK | MB_ICONERROR);
 		exit(0);
 	}
+	m_eventInvoke = CreateEvent(NULL, TRUE, FALSE, NULL);
+	m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID);
+	if (WaitForSingleObject(m_eventInvoke, 100) == WAIT_TIMEOUT) {
+		TRACE("网络消息处理线程启动失败！\r\n");
+	}
+	CloseHandle(m_eventInvoke);
 	m_buffer.resize(BUF_SIZE);
 	memset(m_buffer.data(), 0, BUF_SIZE);
 	struct {
@@ -158,10 +164,12 @@ unsigned CClientSocket::threadEntry(void* arg)
 
 void CClientSocket::threadFunc2()
 {
+	SetEvent(m_eventInvoke);
 	MSG msg;
 	while (::GetMessage(&msg, NULL, 0, 0)) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
+		TRACE("Get Message:%08x\r\n", msg.message);
 		if (m_mapFunc.find(msg.message) != m_mapFunc.end()) {
 			(this->*m_mapFunc[msg.message])(msg.message, msg.wParam, msg.lParam);
 
@@ -264,7 +272,7 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
 			std::string strBuffer;
 			strBuffer.resize(BUF_SIZE);
 			char* pBuffer = (char*)strBuffer.c_str();
-			while (m_sock == INVALID_SOCKET) {
+			while (m_sock != INVALID_SOCKET) {
 				int length = recv(m_sock,pBuffer+index,BUF_SIZE-index, 0);
 				if (length > 0||index>0) {
 					index += (size_t)length;
@@ -333,14 +341,13 @@ CClientSocket* CClientSocket::getInstance()
 
 bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed,WPARAM wParam)
 {
-	if (m_hThread == INVALID_HANDLE_VALUE) {
-		m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID);
-	}
 	UINT nMode = isAutoClosed ? CSM_AUTOCLOSE : 0;
 	std::string strOut;
 	pack.pacData(strOut);
-	return PostThreadMessage(m_nThreadID,WM_SEND_PACK,
+	//post不关心是否投递成功，send关心是否投递成功
+	bool ret=PostThreadMessage(m_nThreadID,WM_SEND_PACK,
 		(WPARAM)new PACKET_DATA(strOut.c_str(),strOut.size(),nMode,wParam),(LPARAM)hWnd);
+	return ret;
 }
 
 bool CClientSocket::getFilePath(std::string& strPath)

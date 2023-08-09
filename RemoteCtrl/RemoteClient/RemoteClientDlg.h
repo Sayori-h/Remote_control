@@ -3,9 +3,9 @@
 //
 
 #pragma once
+#include "ClientSocket.h"
 #include "RemoteClient.h"
 #include "afxdialogex.h"
-#include "ClientSocket.h"
 #include "CWatchDialog.h"
 #include "StatusDlg.h"
 #ifndef WM_SEND_PACK_ACK
