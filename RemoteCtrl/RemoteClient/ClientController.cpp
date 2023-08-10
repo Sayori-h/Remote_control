@@ -59,7 +59,7 @@ void CClientController::CloseSocket()
 bool CClientController::SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose,
 	BYTE* pData, size_t nLength,WPARAM wParam/*, std::list<CPacket>* plstPacks应答结果：分为关心和不关心*/)
 {
-	TRACE("%s start %lld\r\n", __FUNCTION__, GetTickCount64());
+	TRACE("cmd: %d %s start %lld\r\n",nCmd,__FUNCTION__, GetTickCount64());
 	//你这个函数最后一个参数默认是null，你的鼠标事件发包没传这个参数，
 	//所以他是null，你如果能保证每次调用这个函数最后一个参数都不是null，你就可以把这句删掉
 	//if (gpClient->initSocket() == false)return false;
@@ -158,31 +158,33 @@ CClientController::~CClientController()
 }
 
 void CClientController::threadWatchScreen()
-
 {
 	Sleep(50);
+	ULONGLONG nTick = GetTickCount64();
 	while (!m_isClosed)
 	{
 		if (m_watchDlg.isFull() == false) {
-			std::list<CPacket> lstPacks;//应答结果包
-			int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(),6, true, NULL, 0);
-			//TODO:添加消息响应函数WM_SEND_PACK_ACK
-			//TODO:控制发送频率
-			if (ret == 6) {
-				//if (GetImage(m_remoteDlg.GetImage()) == 0) {
-				if (CHuxlTool::BytesToImage(m_watchDlg.GetImage(), lstPacks.front().strData) == 0) {
-					m_watchDlg.SetImageStatus(true);
-					TRACE("成功设置图片 %08X\r\n", (HBITMAP)m_watchDlg.GetImage());
-					TRACE("和校验:%04X\r\n", lstPacks.front().sSum);
-				}
-				else TRACE("获取图片失败！%d\r\n", ret);
+			//std::list<CPacket> lstPacks;//应答结果包
+			if (GetTickCount64() - nTick < 200) {
+				Sleep(200 - DWORD(GetTickCount64() - nTick));
 			}
-			else TRACE("获取图片失败！%d\r\n", ret);
+			nTick = GetTickCount64();
+			bool ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(), 6, true, NULL, 0);
+			//添加消息响应函数WM_SEND_PACK_ACK
+			//控制发送频率
+			if (!ret) {
+				////if (GetImage(m_remoteDlg.GetImage()) == 0) {
+				//if (CHuxlTool::BytesToImage(m_watchDlg.GetImage(), lstPacks.front().strData) == 0) {
+				//	m_watchDlg.SetImageStatus(true);
+				//	TRACE("成功设置图片 %08X\r\n", (HBITMAP)m_watchDlg.GetImage());
+				//	TRACE("和校验:%04X\r\n", lstPacks.front().sSum);
+				TRACE("获取图片失败！ret=%d\r\n", ret);
+			}
 		}
-		Sleep(1);
 	}
-	TRACE("thread end %d\r\n", m_isClosed);
+	Sleep(1);
 }
+
 
 void CClientController::threadWatchScreen(void* arg)
 {

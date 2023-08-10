@@ -62,7 +62,7 @@ CPoint CWatchDialog::UserPoint2RemoteScreenPoint(CPoint& point, bool isScreen)
 	TRACE("client_size=(%d,%d)\r\n", clientRect.Width(), clientRect.Height());
 	int width0 = clientRect.Width();
 	int height0 = clientRect.Height();
-	int width = 1920, height = 1080;
+	int width = m_nObjWidth, height = m_nObjHeight;
 	int x = point.x * width / width0;
 	int y = point.y * height / height0;
 	return CPoint(x, y);
@@ -110,7 +110,7 @@ void CWatchDialog::OnLButtonDblClk(UINT nFlags, CPoint point)
 		event.ptXY = remote;
 		event.nButton = 0;//left
 		event.nAction = 1;//double click
-		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),5, true, (BYTE*)&event, sizeof(event));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&event, sizeof(event));
 		//CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent(); // TODO:存在一个设计隐患,网络通信和对话框有藕合
 		//pParent->SendMessage(WM_SEND_PACKET, 5 << 1 | 1, (WPARAM) & event);
 	}
@@ -125,6 +125,7 @@ void CWatchDialog::OnLButtonDown(UINT nFlags, CPoint point)
 		//坐标转换
 		CPoint remote = UserPoint2RemoteScreenPoint(point);
 		TRACE("new_pos=(%d,%d)\r\n", point.x, point.y);
+		TRACE("remote_pos=(%d,%d)\r\n", remote.x, remote.y);
 		//封装
 		MOUSEEV event;
 		event.ptXY = remote;
@@ -264,33 +265,34 @@ void CWatchDialog::OnBnClickedBtnUnlock()
 
 LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 {
-	if (lParam ==-1||(lParam==-2)) {
+	if (lParam == -1 || (lParam == -2)) {
 		//TODO:错误处理
 	}
 	else if (lParam == 1) {
 		//对方关闭了套接字
 	}
-	else{
+	else {
 		CPacket* pPacket = (CPacket*)wParam;
 		if (pPacket) {
-			switch (pPacket->sCmd) {
+			CPacket head = *(CPacket*)wParam;
+			delete (CPacket*)wParam;
+			switch (head.sCmd) {
 			case 6: {
-				if (m_isFull) {
-					CHuxlTool::BytesToImage(m_image, pPacket->strData);
-					CRect rect;
-					m_picture.GetWindowRect(rect);
-					m_nObjWidth = m_image.GetWidth();
-					m_nObjHeight = m_image.GetHeight();
-					m_image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0,
-						rect.Width(), rect.Height(), SRCCOPY);
-					m_picture.InvalidateRect(NULL);
-					TRACE("更新图片完成%d %d %08X\r\n", m_nObjWidth, m_nObjHeight, (HBITMAP)m_image);
-					m_image.Destroy();
-					m_isFull = false;
-				}
-				  break;
+				CHuxlTool::BytesToImage(m_image, head.strData);
+				CRect rect;
+				m_picture.GetWindowRect(rect);
+				m_nObjWidth = m_image.GetWidth();
+				m_nObjHeight = m_image.GetHeight();
+				m_image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0,
+					rect.Width(), rect.Height(), SRCCOPY);
+				m_picture.InvalidateRect(NULL);
+				TRACE("更新图片完成%d %d %08X\r\n", m_nObjWidth, m_nObjHeight, (HBITMAP)m_image);
+				m_image.Destroy();
+				break;
 			}
 			case 5:
+				TRACE("远程端应答了鼠标操作\r\n");
+				break;
 			case 7:
 			case 8:
 			default:
@@ -298,6 +300,6 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 			}
 		}
 	}
-	
+
 	return 0;
 }

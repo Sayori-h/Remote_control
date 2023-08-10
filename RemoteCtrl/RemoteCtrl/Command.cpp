@@ -28,7 +28,7 @@ CCommand::CCommand() :threadid(0)
 int CCommand::ExcuteCommand(int nCmd)
 {
 	std::map<int, CMDFUNC>::iterator it = m_mapFunction.find(nCmd);
-	
+
 	if (it == m_mapFunction.end())return -1;
 	return(this->*it->second)();
 }
@@ -36,7 +36,8 @@ int CCommand::ExcuteCommand(int nCmd)
 int CCommand::makeDriverInfo() {
 	std::string res;
 	for (int i = 1; i <= 26; i++)
-	{	if (!_chdrive(i)){
+	{
+		if (!_chdrive(i)) {
 			if (res.size())res += ',';
 			res += 'A' + i - 1;
 		}
@@ -141,6 +142,7 @@ int CCommand::downLoadFile() {
 
 int CCommand::mouseEvent() {
 	MOUSEEV mouse;
+	TRACE("!!!\r\n");
 	if (gpServer->getMouseEvent(mouse))
 	{
 		//SetCursorPos(mouse.ptXY.x, mouse.ptXY.y);
@@ -242,7 +244,7 @@ int CCommand::sendScreen() {
 	int nHeight = GetDeviceCaps(hScreen, VERTRES);
 	CImage screen;
 	screen.Create(nWidth, nHeight, nBitPerPixel);//为图像类创建与窗口DC相同大小的DC
-	BitBlt(screen.GetDC(), 0, 0, nWidth, nHeight-20/*跳过任务栏高度*/, hScreen, 0, 0, SRCCOPY);//将窗口DC图像复制到image
+	BitBlt(screen.GetDC(), 0, 0, nWidth, nHeight - 20/*跳过任务栏高度*/, hScreen, 0, 0, SRCCOPY);//将窗口DC图像复制到image
 	ReleaseDC(NULL, hScreen);//释放DC资源<=>GetDC
 	HGLOBAL hMen = GlobalAlloc(GMEM_MOVEABLE, 0);
 	if (hMen == NULL)return -1;
