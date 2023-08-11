@@ -26,7 +26,7 @@ public:
 	//启动
 	int Invoke(CWnd*&pMainWnd);
 	//发送消息
-	LRESULT SendMessage(MSG msg);
+	//LRESULT SendMessage(MSG msg);
 	//更新网络服务器的地址
 	void UpdateAddress(int nIP, int nPort);
 	//由套接字转换为controller过一个桥：斩断界面和数据的耦合
@@ -58,8 +58,6 @@ protected:
 	void threadFunc();
 	//unsigned为了获取线程ID
 	static unsigned __stdcall threadEntry(void* arg);
-	void threadDownFile();
-	static void threadEntryOfDownFile(void* arg);
 	static void releaseInstance();
 	//LRESULT OnSendPack(UINT nMSG, WPARAM wParam, LPARAM lParam);
 	//LRESULT OnSendData(UINT nMSG, WPARAM wParam, LPARAM lParam);
@@ -85,14 +83,12 @@ private:
 			return *this;
 		}
 	}MSGINFO;
-	typedef LRESULT(CClientController::* MSGFUNC)(UINT nMSG,
-		WPARAM wParam, LPARAM lParam);
+	typedef LRESULT(CClientController::* MSGFUNC)(UINT nMSG,WPARAM wParam, LPARAM lParam);
 	static std::map<UINT, MSGFUNC>m_mapFunc;
 	CWatchDialog m_watchDlg;//消息框，在对话框关闭之后，可能导致内存泄漏
 	CRemoteClientDlg m_remoteDlg;
 	CStatusDlg m_statusDlg;
 	HANDLE m_hThread;
-	HANDLE m_hThreadDown;
 	HANDLE m_hThreadWatch;
 	bool m_isClosed;//监视是否关闭
 	CString m_strRemote;//下载文件的远程路径

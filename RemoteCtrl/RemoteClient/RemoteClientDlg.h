@@ -34,9 +34,15 @@ private:
 	CImage m_image;//缓存
 	bool m_isClosed;//监视是否关闭
 	CString GetPath(HTREEITEM hTree);
+	void DealCommand(WORD nCmd, const std::string& strData,LPARAM lParam);
+	void InitUIData();
 	void DelTreeChildItem(HTREEITEM hTree);
 	void LoadFileInfo();
 	void LoadCurInfo();
+	void Str2Tree(const std::string& drivers,CTreeCtrl& tree);
+	void UpdateFileInfo(const FILEINFO& finfo, HTREEITEM hParent);
+	void UpdateDownloadFile(const std::string&strData,FILE*pFile);
+
 	//static void threadEntryOfDownFile(void*arg);
 	//void threadDownFile();
 	//静态函数不能使用this指针
