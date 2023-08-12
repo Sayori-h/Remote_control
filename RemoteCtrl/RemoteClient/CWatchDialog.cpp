@@ -300,6 +300,5 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 			}
 		}
 	}
-
 	return 0;
 }

@@ -64,7 +64,7 @@ bool CClientController::SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose,
 	//所以他是null，你如果能保证每次调用这个函数最后一个参数都不是null，你就可以把这句删掉
 	//if (gpClient->initSocket() == false)return false;
 	//HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-	//TODO:不应该直接发送，而是投入队列
+	//不应该直接发送，而是投入队列
 	//std::list<CPacket> lstPacks;//应答结果包
 	//if (plstPacks == nullptr) {//不关心应答结果，只管发包
 	//	plstPacks = &lstPacks;

@@ -18,7 +18,40 @@
 
 CWinApp theApp;
 
+void ChooseAutoInvoke() {
+	CString strSubKey=_T("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run");
+	CString strInfo = _T("Program 鬵in……&g...\n");
+	strInfo += _T("敤Warten&...");
+	int ret=MessageBox(NULL, strInfo, _T("$提湿口"), MB_OKCANCEL | MB_ICONINFORMATION | MB_TOPMOST);
+	if (ret == IDOK) {
+		char sPath[MAX_PATH] = "";
+		char sSys[MAX_PATH] = "";
+		std::string strExe="\\RemoteCtrl.exe ";
+		GetCurrentDirectoryA(MAX_PATH, sPath);
+		GetSystemDirectoryA(sSys,sizeof(sSys));
+		//创建软链接
+		std::string strCmd = "mklink " +std::string(sSys) + strExe + '\"'+ std::string(sPath) + strExe+'\"';
+		ret=system(strCmd.c_str());
+		TRACE("ret=%d\r\n", ret);
+		HKEY hKey=NULL;
+		ret=RegOpenKeyEx(HKEY_LOCAL_MACHINE, strSubKey, 0, KEY_ALL_ACCESS|KEY_WOW64_64KEY, &hKey);
+		if (ret != ERROR_SUCCESS) {
+			RegCloseKey(hKey);
+			MessageBox(NULL, _T("设置自动开机启动失败！是否权限不足？\r\n程序启动失败"), _T("错误"), MB_ICONERROR | MB_TOPMOST);
+			exit(0);
+		}
+		CString strPath =  CString(_T("%SystemRoot%\\SysWOW64\\RemoteCtrl.exe"));
+		ret = RegSetValueEx(hKey, _T("RemoteCtrl"), 0, REG_SZ, (BYTE*)(LPCTSTR)strPath, strPath.GetLength()*sizeof(TCHAR));
+		if (ret != ERROR_SUCCESS) {
+			RegCloseKey(hKey);
+			MessageBox(NULL, _T("设置自动开机启动失败！是否权限不足？\r\n程序启动失败"), _T("错误"), MB_ICONERROR | MB_TOPMOST);
+			exit(0);
+		}
+		RegCloseKey(hKey);
+	}
+	else exit(0);
 
+}
 
 int main()
 {
@@ -35,6 +68,7 @@ int main()
 		else
 		{
 			CCommand cmd;
+			ChooseAutoInvoke();
 			int count = 0;
 			if (gpServer->initSocket() == false)
 			{

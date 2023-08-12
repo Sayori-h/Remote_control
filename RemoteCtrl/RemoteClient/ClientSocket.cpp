@@ -207,7 +207,7 @@ bool CClientSocket::initSocket()
 int CClientSocket::dealCommand()
 {
 	if (m_sock == -1)return false;
-	char* buffer = m_buffer.data();//TODO:多线程发送命令时可能会出现冲突
+	char* buffer = m_buffer.data();
 	static size_t index = 0;
 	while (true)
 	{
@@ -260,7 +260,7 @@ bool CClientSocket::sendCom(const char* pData, int nSize)
 }
 
 void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
-{//TODO:定义一个消息的数据结构(数据和数据长度，模式：是接到一个应答包就结束还是多个应答包)
+{//定义一个消息的数据结构(数据和数据长度，模式：是接到一个应答包就结束还是多个应答包)
 	//回调消息的数据结构（HWND:窗口句柄 MESSAGE(后来砍掉了):回调什么消息))
 	PACKET_DATA data = *(PACKET_DATA*)wParam;
 	delete (PACKET_DATA*)wParam;
@@ -289,7 +289,7 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
 					index -= nLen;
 					memmove(pBuffer, pBuffer + index, nLen);
 				}
-				else {//TODO:对方关闭了套接字或者网络设备异常
+				else {//对方关闭了套接字或者网络设备异常
 					CloseSocket();
 					::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, 1);
 				}
@@ -302,7 +302,7 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
 		}
 	}
 	else {
-		//TODO:错误处理
+		//错误处理
 		::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, -2);
 	}
 }

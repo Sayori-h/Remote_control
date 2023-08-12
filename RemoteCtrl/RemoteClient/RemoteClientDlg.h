@@ -30,7 +30,7 @@ protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
 	
 	
-private:
+private://TODO:代码即是文档
 	CImage m_image;//缓存
 	bool m_isClosed;//监视是否关闭
 	CString GetPath(HTREEITEM hTree);
