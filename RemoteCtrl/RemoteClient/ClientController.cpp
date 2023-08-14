@@ -70,7 +70,7 @@ bool CClientController::SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose,
 	//	plstPacks = &lstPacks;
 	//}
 	//TRACE("%s terminal %lld\r\n", __FUNCTION__, GetTickCount64());
-	bool ret=gpClient->SendPacket(hWnd,CPacket(nCmd, pData, nLength),bAutoClose,wParam);
+	bool ret=gpClient->SendPacket(hWnd,CPacket(nCmd, pData, nLength),bAutoClose,wParam);//发送数据包
 	//CloseHandle(hEvent);//回收事件句柄，防止资源耗尽
 	//if (plstPacks->size() > 0) {//关心应答结果
 	//	//他就会看一下你发的这个包的一个返回值，就是你的cmd
@@ -103,12 +103,11 @@ void CClientController::DownloadEnd()
 
 int CClientController::DownFile(CString& strPath)
 {
-	CFileDialog dlg(FALSE, NULL, strPath,
-		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, NULL, &m_remoteDlg);
+	CFileDialog dlg(FALSE, NULL, strPath,OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, NULL, &m_remoteDlg);
 	if (dlg.DoModal() == IDOK) {
-		m_strRemote = strPath;
-		m_strLocal = dlg.GetPathName();
-		FILE* pFile = fopen(m_strLocal, "wb+");
+		m_strRemote = strPath;//远程路径
+		m_strLocal = dlg.GetPathName();//本地路径
+		FILE* pFile = fopen(m_strLocal, "wb+");//本地二进制方式打开流，用于写入文件到硬盘上
 		if (!pFile) {
 			AfxMessageBox("本地没有权限保存该文件，或者文件无法创建");
 			return -1;
@@ -118,11 +117,11 @@ int CClientController::DownFile(CString& strPath)
 		//线程处理函数
 		/*m_hThreadDown = (HANDLE)_beginthread(&CClientController::threadEntryOfDownFile, 0, this);
 		if (WaitForSingleObject(m_hThreadDown, 0) != WAIT_TIMEOUT) return -1;*/
-		m_remoteDlg.BeginWaitCursor();
+		m_remoteDlg.BeginWaitCursor();//设置主窗口光标等待
 		m_statusDlg.m_info.SetWindowText(_T("命令正在执行中!"));
-		m_statusDlg.ShowWindow(SW_SHOW);
-		m_statusDlg.CenterWindow(&m_remoteDlg);
-		m_statusDlg.SetActiveWindow();
+		m_statusDlg.ShowWindow(SW_SHOW);//显示
+		m_statusDlg.CenterWindow(&m_remoteDlg);//居中
+		m_statusDlg.SetActiveWindow();//设置到前台
 	}
 	return 0;
 }
@@ -131,7 +130,7 @@ void CClientController::StartWatchScreen()
 {
 	m_isClosed = false;
 	//m_watchDlg.SetParent(&m_remoteDlg);
-	m_hThreadWatch = (HANDLE)_beginthread(&CClientController::threadWatchScreen, 0, this);
+	m_hThreadWatch = (HANDLE)_beginthread(&CClientController::threadWatchScreenEntry, 0, this);
 	m_watchDlg.DoModal();
 	m_isClosed = true;
 	WaitForSingleObject(m_hThreadWatch, 500);
@@ -186,11 +185,11 @@ void CClientController::threadWatchScreen()
 }
 
 
-void CClientController::threadWatchScreen(void* arg)
+void CClientController::threadWatchScreenEntry(void* arg)
 {
-	CClientController* thiz = (CClientController*)arg;
-	thiz->threadWatchScreen();
-	_endthreadex(0);
+	CClientController* thiz = (CClientController*)arg;//这里传入的是this指针，才能调用类的成员函数
+	thiz->threadWatchScreen();//调用下载函数
+	_endthreadex(0);//结束线程
 }
 
 void CClientController::threadFunc()

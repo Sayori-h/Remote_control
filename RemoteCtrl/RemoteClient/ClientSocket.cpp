@@ -31,12 +31,9 @@ CClientSocket::CClientSocket(const CClientSocket& ss)
 }
 
 CClientSocket::CClientSocket() :
-	m_nIP(INADDR_ANY), m_nPort(0), m_sock(INVALID_SOCKET), m_bAutoClose(true), m_hThread(INVALID_HANDLE_VALUE)
+	m_nIP(INADDR_ANY), m_nPort(0), m_sock(INVALID_SOCKET), m_bAutoClose(true), m_hThread(INVALID_HANDLE_VALUE){
 	//无效IP和端口，防止连上
-{
-	m_sock = INVALID_SOCKET;
-	if (InitSockEnv() == FALSE)
-	{
+	if (InitSockEnv() == FALSE){
 		MessageBox(NULL, _T("初始化WinSock库失败！"), _T("错误"), MB_OK | MB_ICONERROR);
 		exit(0);
 	}
@@ -53,7 +50,6 @@ CClientSocket::CClientSocket() :
 		MSGFUNC func;
 	}funcs[] = {
 		{WM_SEND_PACK,&CClientSocket::SendPack},
-		//{WM_SEND_PACK},
 		{0,NULL}
 	};
 	for (int i = 0; funcs[i].message; i++) {
@@ -172,21 +168,21 @@ void CClientSocket::threadFunc2()
 		TRACE("Get Message:%08x\r\n", msg.message);
 		if (m_mapFunc.find(msg.message) != m_mapFunc.end()) {
 			(this->*m_mapFunc[msg.message])(msg.message, msg.wParam, msg.lParam);
-
 		}
 	}
 }
 
-bool CClientSocket::initSocket()
-{
+bool CClientSocket::initSocket(){
 	if (m_sock != INVALID_SOCKET)CloseSocket();
 	m_sock = socket(PF_INET, SOCK_STREAM, 0);
 	if (m_sock == -1)return false;
+
 	sockaddr_in serv_adr;
 	memset(&serv_adr, 0, sizeof(serv_adr));
 	serv_adr.sin_family = AF_INET;
 	serv_adr.sin_addr.s_addr = htonl(m_nIP);
 	serv_adr.sin_port = htons(m_nPort);
+
 	if (serv_adr.sin_addr.s_addr == INADDR_NONE)
 	{
 		AfxMessageBox("无可用IP地址!");
@@ -207,11 +203,12 @@ bool CClientSocket::initSocket()
 int CClientSocket::dealCommand()
 {
 	if (m_sock == -1)return false;
-	char* buffer = m_buffer.data();
-	static size_t index = 0;
+	char* buffer = m_buffer.data();//new char[BUFFER_SIZE]
+	static size_t index = 0;//*注意，此处用来静态，为了在下面循环中保留index的值
 	while (true)
 	{
-		size_t len = recv(m_sock, buffer + index, BUF_SIZE - index, 0);
+		/*目的是将所有的包都放入缓冲区*/
+		size_t len = recv(m_sock, buffer + index, BUF_SIZE - index, 0);//实际接收到的长度
 		if (((int)len <= 0) && ((int)index <= 0))return -1;
 		TRACE("recv len =%d(0x%08X) index =%d(0x%08X)\r\n", len, len, index, index);
 		//dump((BYTE*)buffer, len);
@@ -222,9 +219,9 @@ int CClientSocket::dealCommand()
 		TRACE("command %d\r\n", m_packet.sCmd);
 		if (len > 0)
 		{
-			memmove(buffer, buffer + len, index - len);
+			memmove(buffer, buffer + len, index - len);//追加
 			index -= len;
-			return m_packet.sCmd;
+			return m_packet.sCmd;//接收成功，返回命令
 		}
 	}
 	return -1;

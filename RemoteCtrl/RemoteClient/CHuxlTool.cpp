@@ -19,9 +19,10 @@ void CHuxlTool::dump(BYTE* pData, size_t nSize) {
 
 int CHuxlTool::BytesToImage(CImage& image, const std::string& strBuffer)
 {
-	BYTE* pData = (BYTE*)strBuffer.c_str();
 	//存入CImage
+	BYTE* pData = (BYTE*)strBuffer.c_str();
 	//创建一块内存句柄，用于目标流
+	//能调整大小的  在内存中分配一个全局的堆
 	HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
 	if (!hMem)
 	{
@@ -29,16 +30,18 @@ int CHuxlTool::BytesToImage(CImage& image, const std::string& strBuffer)
 		Sleep(1);
 		return -1;
 	}
-	IStream* pStream = NULL;
-	HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
+	IStream* pStream = NULL;//建立内存流
+	HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);//创建流到全局内存区
 	if (hRet == S_OK) {
-		ULONG length = 0;
+		ULONG length = 0;//用于记录_OUT_实际写入的字节数
+		//利用pData流写入pStream中
 		pStream->Write(pData, strBuffer.size(), &length);
 		LARGE_INTEGER bg{ 0 };
-		pStream->Seek(bg, STREAM_SEEK_SET, NULL);
-		if ((HBITMAP)image != NULL)image.Destroy();
-		image.Load(pStream);
+		pStream->Seek(bg, STREAM_SEEK_SET, NULL);//跳转到流的头部
+		if ((HBITMAP)image != NULL)image.Destroy();//在加载前先释放之前的
+		image.Load(pStream);//加载进缓存
 		return hRet;
 	}
+	return -1;
 }
 

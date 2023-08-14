@@ -455,11 +455,12 @@ void CRemoteClientDlg::OnDeleteFile()
 
 void CRemoteClientDlg::OnRunFile()
 {
-	HTREEITEM hSelected = m_Tree.GetSelectedItem();
-	CString strPath = GetPath(hSelected);
-	int nSelected = m_List.GetSelectionMark();
-	CString strFile = m_List.GetItemText(nSelected, 0);
-	strFile = strPath + strFile;
+	HTREEITEM hSelected = m_Tree.GetSelectedItem();//拿到树坐标
+	CString strPath = GetPath(hSelected);//拿到坐标的路径
+	int nSelected = m_List.GetSelectionMark();//得到文件名坐标
+	CString strFile = m_List.GetItemText(nSelected, 0);//得到文件名
+	strFile = strPath + strFile;//组合路径
+	//发送
 	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 3, true, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
 	if (ret < 0) {
 		AfxMessageBox("打开文件命令执行失败！！！");

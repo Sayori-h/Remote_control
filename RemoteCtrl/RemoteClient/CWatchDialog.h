@@ -50,5 +50,5 @@ public:
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnBnClickedBtnLock();
 	afx_msg void OnBnClickedBtnUnlock();
-	afx_msg LRESULT OnSendPackAck(WPARAM wParam,LPARAM lParam);
+	afx_msg LRESULT OnSendPackAck(WPARAM wParam,LPARAM lParam);//参数含义：一个包一个错误
 };

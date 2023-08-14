@@ -65,6 +65,7 @@ public:
 	// 端口号
 	CString m_nPort;
 	DWORD m_server_address;
+	//鼠标点击按钮事件，发送命令1
 	afx_msg void OnBnClickedBtnFileinfo();
 	// 对方的文件目录
 	CTreeCtrl m_Tree;

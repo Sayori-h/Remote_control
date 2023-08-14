@@ -4,9 +4,15 @@
 
 CCommand::CCommand() :threadid(0)
 {
+	/*使用映射表
+	*1利于后面添加改变，插入
+	*2switch的方式会随数量增加，查找速度会减慢
+	*3使用hash值寻找
+	*4 switch和if的方式有局限性，最多255个
+	*/
 	struct {
 		int nCmd;
-		CMDFUNC func;//函数指针
+		CMDFUNC func;//函数指针，命令对应的处理函数
 	}data[] = {
 		{ 1   ,&CCommand::makeDriverInfo },
 		{ 2   ,&CCommand::makeDirectoryInfo },
