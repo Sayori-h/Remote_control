@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "CServerSocket.h"
+#include <list>
 #define BUF_SIZE 40960000
 
 CServerSocket::CServerSocket(const CServerSocket& ss) :\
@@ -44,7 +45,7 @@ void CServerSocket::releaseInstance()
 	}
 }
 
-bool CServerSocket::initSocket()
+bool CServerSocket::initSocket(short port)
 {
 	if (m_serv_sock == -1)return false;
 	sockaddr_in serv_adr;
@@ -57,8 +58,51 @@ bool CServerSocket::initSocket()
 		return false;
 	}
 	if (listen(m_serv_sock, 1))return false;
+	
 	return true;
 }
+
+int CServerSocket::run(SOCKET_CALLBACK callback, void* arg,short port)
+{
+	//1进度的可控性2对接的方便性3可行性评估，提早暴露风险
+	// TODO: socket、bind、 listen、accept、 read、write、 close
+	// 函数功能：该函数是服务端核心入口函数，用于对外使用的接口
+	//参数1：Command的静态处理函数
+	//参数2：执行命令的对象，即Command对象
+	//参数3：端口号，默认9527
+	//返回值：失败返回-1，
+	//	其做出以下几个响应动作：
+	//		①初始化网络库，即调用InitSocket()
+	//		②连接客户端，即调用AcceptClient()
+	//		③处理客户端发来的数据，返回命令，即调用DealCommand()
+	//		④将命令交给Command类对象，让其完成命令操作
+	//		⑤从成员lstPackets表中取得从Command处理后的数据(功能函数push_back的数据，参考Command类的功能函数)，然后调用Send发送回客户端
+	//套接字初始化
+	bool ret = initSocket(port);
+	if (ret == false)return -1;
+	std::list<CPacket> lstPackets;
+	m_callback = callback;
+	m_arg = arg;
+	int count = 0;
+	while (true)
+	{
+		if (acceptCli() == false) {
+			if (count >= 3) {
+				return -2;
+			}
+			count++;
+		}
+		int ret = dealCommand();
+		if (ret > 0)m_callback(m_arg, ret,lstPackets,m_packet);
+		while (lstPackets.size() > 0) {
+			sendCom(lstPackets.front());
+			lstPackets.pop_front();
+		}
+		CloseClient();
+	}
+	return 0;
+}
+
 bool CServerSocket::acceptCli()
 {
 	sockaddr_in cli_adr;
@@ -73,6 +117,9 @@ bool CServerSocket::acceptCli()
 }
 int CServerSocket::dealCommand()
 {
+	/*函数说明：接受发数据，解包，取得包里的命令并返回
+返回值： 成功得到命令 ，  失败得到 -1
+*/
 	if (m_client == -1)return false;
 	char* buffer = new char[BUF_SIZE];
 	if (buffer == NULL)
@@ -84,7 +131,7 @@ int CServerSocket::dealCommand()
 	static size_t index = 0;
 	while (true)
 	{
-		size_t len = recv(m_client, buffer + index, BUF_SIZE - index, 0);
+		size_t len = recv(m_client, buffer + index, BUF_SIZE - index, 0);//实际接收到的长度
 		if ((int)len <= 0)
 		{
 			delete[]buffer;
@@ -93,13 +140,13 @@ int CServerSocket::dealCommand()
 		//TRACE("recv %d\r\n", len);
 		index += len;
 		len = index;
-		m_packet = CPacket((BYTE*)buffer, len);
+		m_packet = CPacket((BYTE*)buffer, len);//解包
 		if (len > 0)
 		{
 			memmove(buffer, buffer + len, BUF_SIZE - len);
 			index -= len;
 			delete[]buffer;
-			return m_packet.sCmd;
+			return m_packet.sCmd;//接收成功，返回命令
 		}
 	}
 	delete[]buffer;
@@ -150,8 +197,10 @@ CPacket& CServerSocket::GetPacket()
 
 void CServerSocket::CloseClient()
 {
-	closesocket(m_client);
-	m_client = INVALID_SOCKET;
+	if (m_client != INVALID_SOCKET) {
+		closesocket(m_client);
+		m_client = INVALID_SOCKET;
+	}
 }
 
 
@@ -173,107 +222,3 @@ CServerSocket* CServerSocket::m_instance = NULL;
 CServerSocket* gpServer = CServerSocket::getInstance();
 CServerSocket::CNewAndDel CServerSocket::m_newdel;
 
-
-CPacket::CPacket() :sHead(0), nLength(0), sCmd(0), sSum(0) {}
-
-CPacket& CPacket::operator=(const CPacket& pack)
-{
-	if (this != &pack)
-	{
-		sHead = pack.sHead;
-		nLength = pack.nLength;
-		sCmd = pack.sCmd;
-		strData = pack.strData;
-		sSum = pack.sSum;
-	}
-	return *this;
-}
-
-CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize)
-{
-	sHead = 0xFEFF;
-	nLength = nSize + 4;
-	sCmd = nCmd;
-	if (nSize > 0)
-	{ // 直接就是一次性发完的
-		strData.resize(nSize);
-		memcpy((void*)strData.c_str(), pData, nSize);
-	}
-	else {
-		strData.clear();
-	}
-	sSum = 0;
-	for (size_t j = 0; j < strData.size(); j++)
-	{
-		sSum += BYTE(strData[j]) & 0xFF;
-	}
-}
-
-CPacket::CPacket(const BYTE* pData, size_t& nSize) :sHead(0), nLength(0), sCmd(0), sSum(0)
-{
-	size_t i = 0;
-	for (; i < nSize; i++)
-	{
-		if (*(WORD*)(pData + i) == 0xFEFF) {
-			sHead = *(WORD*)(pData + i);//?
-			i += 2;
-			break;
-		}
-	}
-	if (i + 4 + 2 + 2 > nSize)
-	{
-		nSize = 0;
-		return;
-	}
-	nLength = *(DWORD*)(pData + i);//?  nLength长度
-	i += 4;
-	if (nLength + i > nSize)
-	{
-		nSize = 0;
-		return;
-	}
-	sCmd = *(WORD*)(pData + i);//?
-	i += 2;
-	if (nLength > 4)
-	{
-		strData.resize(nLength - 2 - 2);
-		memcpy((void*)strData.c_str(), pData + i, nLength - 4);
-		i += nLength - 4;
-	}
-	sSum = *(WORD*)(pData + i); i += 1;
-	WORD sum = 0;
-	for (size_t j = 0; j < strData.size(); j++)
-	{
-		sum += BYTE(strData[j]) & 0xFF;//保持二进制补码的一致性，消除负数
-	}
-	if (sum == sSum) {
-		nSize = nLength + 2 + 4;
-		return;
-	}
-}
-
-CPacket::CPacket(const CPacket& pack)
-{
-	sHead = pack.sHead;
-	nLength = pack.nLength;
-	sCmd = pack.sCmd;
-	strData = pack.strData;
-	sSum = pack.sSum;
-}
-
-int CPacket::pacSize()
-{
-	return nLength + 6;
-}
-
-const char* CPacket::pacData()
-{
-	strOut.resize(nLength + 6);
-	BYTE* pData = (BYTE*)strOut.c_str();
-	*(WORD*)pData = sHead; pData += 2;
-	*(DWORD*)pData = nLength; pData += 4;
-	*(WORD*)pData = sCmd; pData += 2;
-	memcpy(pData, strData.c_str(), strData.size()); pData += strData.size();
-	*(WORD*)pData = sSum;
-	return strOut.c_str();
-}
