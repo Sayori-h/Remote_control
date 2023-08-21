@@ -87,9 +87,7 @@ int CServerSocket::run(SOCKET_CALLBACK callback, void* arg,short port)
 	while (true)
 	{
 		if (acceptCli() == false) {
-			if (count >= 3) {
-				return -2;
-			}
+			if (count >= 3) return -2;
 			count++;
 		}
 		int ret = dealCommand();
@@ -109,10 +107,7 @@ bool CServerSocket::acceptCli()
 	int cli_sz = sizeof(cli_adr);
 	m_client = accept(m_serv_sock, (sockaddr*)&cli_adr, &cli_sz);
 	TRACE("m_client=%d\r\n", m_client);
-	if (m_client == -1)
-	{
-		return false;
-	}
+	if (m_client == -1)return false;
 	return true;
 }
 int CServerSocket::dealCommand()
