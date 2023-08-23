@@ -154,6 +154,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CEdoyunQueue.h" />
     <ClInclude Include="CHuxlTool.h" />
     <ClInclude Include="Command.h" />
     <ClInclude Include="CServerSocket.h" />

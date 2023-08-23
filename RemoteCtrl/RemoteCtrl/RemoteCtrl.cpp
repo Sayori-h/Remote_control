@@ -7,6 +7,7 @@
 #include "CServerSocket.h"
 #include "Command.h"
 #include <conio.h>
+#include "CEdoyunQueue.h"
 
 
 #ifdef _DEBUG
@@ -125,40 +126,43 @@ int main(){
 	请求可以随便发不会乱，系统会保证是按顺序来的，类似与MFC消息机制，区别在IOCP是由内核控制的
 	*/
 	printf("press any key to exit …… \r\n");
-	HANDLE hIOCP = INVALID_HANDLE_VALUE;//Input/Output Completion Port
-	hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);//epoll是单线程的，CP可以有多个线程
-	if (hIOCP == INVALID_HANDLE_VALUE || (hIOCP == NULL)) {
-		printf("create iocp failed!%d\r\n", GetLastError());
-		return 1;
-	}
-	HANDLE hThread=(HANDLE)_beginthread(threadQueueEntry, 0, hIOCP);
+	CEdoyunQueue<std::string> lstString;
+	//HANDLE hIOCP = INVALID_HANDLE_VALUE;//Input/Output Completion Port
+	//hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);//epoll是单线程的，CP可以有多个线程
+	//if (hIOCP == INVALID_HANDLE_VALUE || (hIOCP == NULL)) {
+	//	printf("create iocp failed!%d\r\n", GetLastError());
+	//	return 1;
+	//}
+	//HANDLE hThread=(HANDLE)_beginthread(threadQueueEntry, 0, hIOCP);
 
 	ULONGLONG tick = GetTickCount64();
 	ULONGLONG tick0 = GetTickCount64();
-	int count = 0, count0 = 0;
+	//int count = 0, count0 = 0;
 	while (_kbhit()==0) {//核心设计理念：完成端口把请求(多线程pop,push,empty)与实现分离了
 		if (GetTickCount64() - tick0 > 1300) {//read
-			PostQueuedCompletionStatus(hIOCP, sizeof(IOCP_PARAM),
-				(ULONG_PTR)new IOCP_PARAM(IocpListPop, "hello world",func), NULL);
+			lstString.PushBack("hello world");
 			tick0 = GetTickCount64();
-			count++;
+			//count++;
 		}
 		if (GetTickCount64() - tick > 2000) {//write
-			PostQueuedCompletionStatus(hIOCP, sizeof(IOCP_PARAM), 
-				(ULONG_PTR)new IOCP_PARAM(IocpListPush, "hello world"), NULL);
+			std::string str;
+			lstString.PopFront(str);
 			tick = GetTickCount64();
-			count0++;
+			printf("pop from queue:%s\r\n", str.c_str());
+			//count0++;
 		}
 		Sleep(1);
 	}
-	if (hIOCP != NULL) {
-		//控制完成端口状态
-		PostQueuedCompletionStatus(hIOCP, 0, NULL, NULL);
-		WaitForSingleObject(hThread, INFINITE);
-	}
-	//所有线程结束后再close
-	CloseHandle(hIOCP);
-	printf("hThread exit done! count:%d count0:%d\r\n",count,count0);
+	//if (hIOCP != NULL) {
+	//	//控制完成端口状态
+	//	PostQueuedCompletionStatus(hIOCP, 0, NULL, NULL);
+	//	WaitForSingleObject(hThread, INFINITE);
+	//}
+	////所有线程结束后再close
+	//CloseHandle(hIOCP);
+	printf("hThread exit done! size:%d \r\n",lstString.Size());
+	lstString.Clear();
+	printf("hThread exit done! size:%d \r\n",lstString.Size());
 	exit(0);
 
 	//if (CHuxlTool::IsAdmin()) {
