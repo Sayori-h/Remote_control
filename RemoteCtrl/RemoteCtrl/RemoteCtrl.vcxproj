@@ -159,6 +159,8 @@
     <ClInclude Include="Command.h" />
     <ClInclude Include="CServerSocket.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="HuxlServer.h" />
+    <ClInclude Include="HuxlThread.h" />
     <ClInclude Include="LockInfoDialog.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="pch.h" />
@@ -170,6 +172,7 @@
     <ClCompile Include="CHuxlTool.cpp" />
     <ClCompile Include="Command.cpp" />
     <ClCompile Include="CServerSocket.cpp" />
+    <ClCompile Include="HuxlServer.cpp" />
     <ClCompile Include="LockInfoDialog.cpp" />
     <ClCompile Include="Packet.cpp" />
     <ClCompile Include="pch.cpp">
@@ -182,6 +185,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="RemoteCtrl.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

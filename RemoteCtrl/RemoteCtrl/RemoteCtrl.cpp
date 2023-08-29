@@ -8,6 +8,8 @@
 #include "Command.h"
 #include <conio.h>
 #include "CEdoyunQueue.h"
+#include <MSWSock.h>
+#include "HuxlServer.h"
 
 
 #ifdef _DEBUG
@@ -40,130 +42,78 @@ bool ChooseAutoInvoke(const CString& strPath) {
 	return true;
 }
 
-enum {
-	IocpListEmpty,
-	IocpListPush,
-	IocpListPop
+class COverlapped {
+public:
+	OVERLAPPED m_overlapped;
+	DWORD m_operator;
+	char m_buffer[4096];
+	COverlapped() {
+		m_operator = 0;
+		memset(&m_overlapped, 0, sizeof(m_overlapped));
+		memset(m_buffer, 0, sizeof(m_buffer));
+	}
 };
 
-typedef struct IocpParam {
-	int nOperator;//操作
-	std::string strData;//数据
-	_beginthread_proc_type cbFunc;//回调
-	IocpParam(int op, const char* sData, _beginthread_proc_type cb=NULL) {
-		nOperator = op;
-		strData = sData;
-		cbFunc = cb;
-	}
-	IocpParam() {
-		nOperator = -1;
-	}
-}IOCP_PARAM;
+void iocp() {
+	////SOCKET sock = socket(AF_INET,SOCK_STREAM,0);//TCP
+	//SOCKET sock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+	//if (sock == INVALID_SOCKET) {
+	//	CHuxlTool::ShowError();
+	//	return;
+	//}
+	//HANDLE hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, sock, 4);
+	//SOCKET client = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+	//CreateIoCompletionPort((HANDLE)sock, hIOCP, 0, 0);
 
-void threadmain(HANDLE hIOCP) {
-	std::list<std::string>lstString;//内存泄漏，单独放在函数里，函数结束一定可以析构
-	DWORD dwTransferred = 0;
-	ULONG_PTR CompletionKey = 0;
-	OVERLAPPED* pOverlapped = NULL;
-	int count = 0, count0 = 0, total = 0;
-	while (GetQueuedCompletionStatus(hIOCP, &dwTransferred, &CompletionKey, &pOverlapped, INFINITE)) {
-		if ((dwTransferred == 0) || (CompletionKey == NULL)) {//post的参数
-			printf("thread is prepare to exit!\r\n");
-			break;
-		}
-		IOCP_PARAM* pParam = (IOCP_PARAM*)CompletionKey;
-		if (pParam->nOperator == IocpListPush) {
-			lstString.push_back(pParam->strData);
-			printf("push size:%d\r\n", lstString.size());
-			count0++;
-		}
-		else if (pParam->nOperator == IocpListPop) {
-			printf("%p size:%d\r\n", pParam->cbFunc, lstString.size());
-			std::string str;
-			if (lstString.size() > 0) {
-				str = (lstString.front());
-				lstString.pop_front();
-			}
-			if (pParam->cbFunc) {
-				pParam->cbFunc((void*)&str);//回调函数当场处理
-			}
-			count++;
-		}
-		else if (pParam->nOperator == IocpListEmpty) {
-			lstString.clear();
-		}
-		delete pParam;
-		printf("total %d\r\n", ++total);
-	}
-	printf("thread exit count:%d count0:%d\r\n", count, count0);
+	//sockaddr_in addr;
+	//addr.sin_family = PF_INET;
+	//addr.sin_addr.s_addr = inet_addr("0.0.0.0");
+	//addr.sin_port = htons(9527);
+	//bind(sock, (sockaddr*)&addr, sizeof(addr));
+	//listen(sock, 5);
+	//COverlapped overlapped;
+	//overlapped.m_operator = 1;//accept
+	//memset(&overlapped, 0, sizeof(OVERLAPPED));
+	////accept()
+	//char buffer[4096] = "";
+	//DWORD received = 0;
+	//if (AcceptEx(sock, client, overlapped.m_buffer, 0,/*sizeof(buffer)-32,只有填满字节数才会建立连接，防止空的嗅探包,*/
+	//	sizeof(sockaddr_in),/*+ 16规定 + 16 */
+	//	sizeof(sockaddr_in) + 16, &received, &overlapped.m_overlapped) == FALSE) {
+	//	CHuxlTool::ShowError();
+	//}
+	//overlapped.m_operator = 2;//send
+	//WSASend();
+	//overlapped.m_operator = 3;//recv
+	//WSARecv();
+
+	////开启线程
+	//while (true)
+	//{//代表一个线程
+	//	LPOVERLAPPED pOverlapped = NULL;
+	//	DWORD transferred = 0;
+	//	DWORD Compeletionkey = 0;
+	//	if (GetQueuedCompletionStatus(hIOCP,&transferred,&Compeletionkey,&pOverlapped,INFINITE))
+	//	{//利用宏拿到原来父类的地址，COverlapped对象的一个地址
+	//		COverlapped* p0 = CONTAINING_RECORD(pOverlapped, COverlapped, m_overlapped);
+	//		switch (p0->m_operator)
+	//		{
+	//		case 1:
+	//			
+	//		default:
+	//			break;
+	//		}
+	//		
+	//	}
+	//}	
+	HuxlServer server;
+	server.StartService();
+	getchar();
 }
 
-void threadQueueEntry(HANDLE hIOCP) {//入口函数和功能函数分开，_endthread()后面才析构
-	threadmain(hIOCP);
-	_endthread();//代码到此为止，会导致本地对象无法调用析构，从而使得内存发生泄漏，所以单独拿出来
-}
-
-void func(void* arg) {
-	std::string* pstr = (std::string*)arg;
-	if (pstr != NULL) {
-		printf("pop from list:%s\r\n", pstr->c_str());
-		//delete pstr;
-	}
-	else {
-		printf("list is empty,no data!\r\n");
-	}
-}
 int main(){
 	if (!CHuxlTool::Init())return 1;
-	/*
-	总的流程就是：创建一个完成端口对象，把某个文件或非文件绑定起来，然后开一个线程，然后有其他的线程就可以往
-	完成端口里面触发一个事件，这是一种方式。还有一种就是说往这个绑定的句柄做一些事情，比如读写数据
-	通过这两种方式推动完成端口状态的转换，这个状态怎么转换的呢，这个转换在外面是看不到的，在外面只能看到往完成端口句柄（hIOCP）
-	里面做了一些操作，做完这些操作后，有些状态会发生变化；但这些变化不要当场去拿，最好是通过回调函数去拿。最后要往完成端口里面
-	post一个空的东西，如果抓到空的东西，就知道我要结束了
-	为什么能实现线程安全：真正能操作list的线程只有一个，只不过数据的读取和写入允许多线程.
-	好处1：不用上锁。好处2：数据拿到后怎么处理？通过回调函数，当场处理掉，不需要线程等待，把请求与实现分离了
-	请求可以随便发不会乱，系统会保证是按顺序来的，类似与MFC消息机制，区别在IOCP是由内核控制的
-	*/
-	printf("press any key to exit …… \r\n");
-	CEdoyunQueue<std::string> lstString;
-	//HANDLE hIOCP = INVALID_HANDLE_VALUE;//Input/Output Completion Port
-	//hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);//epoll是单线程的，CP可以有多个线程
-	//if (hIOCP == INVALID_HANDLE_VALUE || (hIOCP == NULL)) {
-	//	printf("create iocp failed!%d\r\n", GetLastError());
-	//	return 1;
-	//}
-	//HANDLE hThread=(HANDLE)_beginthread(threadQueueEntry, 0, hIOCP);
-
-	ULONGLONG tick = GetTickCount64();
-	ULONGLONG tick0 = GetTickCount64();
-	//int count = 0, count0 = 0;
-	while (_kbhit()==0) {//核心设计理念：完成端口把请求(多线程pop,push,empty)与实现分离了
-		if (GetTickCount64() - tick0 > 1300) {//read
-			lstString.PushBack("hello world");
-			tick0 = GetTickCount64();
-			//count++;
-		}
-		if (GetTickCount64() - tick > 2000) {//write
-			std::string str;
-			lstString.PopFront(str);
-			tick = GetTickCount64();
-			printf("pop from queue:%s\r\n", str.c_str());
-			//count0++;
-		}
-		Sleep(1);
-	}
-	//if (hIOCP != NULL) {
-	//	//控制完成端口状态
-	//	PostQueuedCompletionStatus(hIOCP, 0, NULL, NULL);
-	//	WaitForSingleObject(hThread, INFINITE);
-	//}
-	////所有线程结束后再close
-	//CloseHandle(hIOCP);
-	printf("hThread exit done! size:%d \r\n",lstString.Size());
-	lstString.Clear();
-	printf("hThread exit done! size:%d \r\n",lstString.Size());
-	exit(0);
+	iocp();
 
 	//if (CHuxlTool::IsAdmin()) {
 	//	if (!CHuxlTool::Init())return 1;

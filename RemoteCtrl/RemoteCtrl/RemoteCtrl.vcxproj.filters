@@ -48,6 +48,12 @@
     <ClInclude Include="CEdoyunQueue.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="HuxlThread.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="HuxlServer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RemoteCtrl.cpp">
@@ -71,10 +77,16 @@
     <ClCompile Include="Packet.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="HuxlServer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="RemoteCtrl.rc">
       <Filter>资源文件</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
 </Project>

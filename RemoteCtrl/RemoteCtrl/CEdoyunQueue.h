@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 #include <atomic>
+#include <list>
 
 template<class T>
 class CEdoyunQueue
@@ -31,24 +32,26 @@ private:
 	std::list<T> m_lstData;
 	HANDLE m_hCompeletionPort;
 	HANDLE m_hThread;
-	volatile std::atomic_bool m_lock;//队列正在析构
+	volatile std::atomic_bool m_lock;//队列正在析构，担心post后还有人push或pop
 public:
 	CEdoyunQueue() {
 		m_lock = false;
 		m_hCompeletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);
 		m_hThread = INVALID_HANDLE_VALUE;
 		if (m_hCompeletionPort != NULL) {
-			m_hThread = (HANDLE)_beginthread(&CEdoyunQueue<T>::threadEntry, 0, m_hCompeletionPort);
+			m_hThread = (HANDLE)_beginthread(&CEdoyunQueue<T>::threadEntry, 0, this);
 		}
 	};
 	~CEdoyunQueue() {
 		if (m_lock)return;
 		m_lock = true;
-		HANDLE hTemp = m_hCompeletionPort;
 		PostQueuedCompletionStatus(m_hCompeletionPort, 0, NULL, NULL);
 		WaitForSingleObject(m_hThread, INFINITE);
-		m_hCompeletionPort = NULL;
-		CloseHandle(m_hCompeletionPort);
+		if (m_hCompeletionPort) {
+			HANDLE hTemp = m_hCompeletionPort;
+			m_hCompeletionPort = NULL;
+			CloseHandle(hTemp);
+		}
 	}
 	bool PushBack(const T& data) {
 		IocpParam* pParam = new IocpParam(EQPush, data);
@@ -58,6 +61,7 @@ public:
 		}
 		bool ret = PostQueuedCompletionStatus(m_hCompeletionPort, sizeof(PPARAM), (ULONG_PTR)pParam, NULL);
 		if (ret == false)delete pParam;//post成功时由线程函数delete
+		//printf("push back done %d %08p\r\n", ret,(void*)pParam);
 		return ret;
 	}
 	bool PopFront(T& data) {
@@ -98,6 +102,7 @@ public:
 		IocpParam* pParam = new IocpParam(EQClear, T());
 		bool ret = PostQueuedCompletionStatus(m_hCompeletionPort, sizeof(PPARAM), (ULONG_PTR)pParam, NULL);
 		if (ret == false)delete pParam;//post成功时由线程函数delete
+		//printf("Clear %08p\r\n", (void*)pParam);
 		return ret;
 	}
 private:
@@ -111,6 +116,7 @@ private:
 		case EQPush:
 			m_lstData.push_back(pParam->Data);
 			delete pParam;
+			//printf("delete %08p\r\n", (void*)pParam);
 			break;
 		case EQPop:
 			if (m_lstData.size() > 0) {
@@ -120,11 +126,13 @@ private:
 			if (pParam->hEvent != NULL) SetEvent(pParam->hEvent);
 			break;
 		case EQSize:
-			m_lstData.clear();
-			delete pParam;
+			pParam->nOperator = m_lstData.size();
+			if (pParam->hEvent != NULL) SetEvent(pParam->hEvent);
 			break;
 		case EQClear:
 			m_lstData.clear();
+			delete pParam;
+			//printf("delete %08p\r\n", (void*)pParam);
 			break;
 		default:
 			OutputDebugStringA("unknown operator!\r\n");
@@ -155,7 +163,10 @@ private:
 			pParam = (PPARAM*)CompletionKey;
 			DealParam(pParam);
 		}
-		CloseHandle(m_hCompeletionPort);
+		HANDLE hTemp = m_hCompeletionPort;
+		m_hCompeletionPort = NULL;
+		//51行析构函数内close过一次，为防止没调用析构函数，此处再close一次
+		CloseHandle(hTemp);
 	}
 };
 

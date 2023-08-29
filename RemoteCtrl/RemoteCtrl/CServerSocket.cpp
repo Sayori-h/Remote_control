@@ -28,7 +28,7 @@ CServerSocket::~CServerSocket()
 BOOL CServerSocket::InitSockEnv()
 {
 	WSADATA data;
-	if (WSAStartup(MAKEWORD(1, 1), &data) == SOCKET_ERROR)
+	if (WSAStartup(MAKEWORD(2, 0), &data) == SOCKET_ERROR)
 	{
 		return FALSE;
 	}
