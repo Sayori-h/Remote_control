@@ -24,7 +24,7 @@ public:
 		return *this;
 	};
 	int operator()() {
-		if (thiz) {
+		if (IsValid()) {
 			return (thiz->*func)();
 		}
 		return -1;
@@ -46,6 +46,7 @@ private:
 public:
 	HuxlThread() {
 		m_hThread = NULL;
+		m_bStatus = false;
 	}
 	~HuxlThread() {
 		Stop();
@@ -65,24 +66,32 @@ public:
 	bool Stop() {
 		if (m_bStatus == false)return true;
 		m_bStatus = false;
-		bool ret= WaitForSingleObject(m_hThread, INFINITE)==WAIT_OBJECT_0;
+		DWORD ret= WaitForSingleObject(m_hThread, 1000);
+		if (ret == WAIT_TIMEOUT) {
+			TerminateThread(m_hThread,-1);
+		}
 		UpdateWorker();
-		return ret;
+		return ret==WAIT_OBJECT_0;
 	}
 	void UpdateWorker(const ::ThreadWorker& worker=::ThreadWorker()) {
-		if (!worker.IsValid()) {
-			m_worker.store(NULL);
-			return;
-		}
-		if (m_worker.load()) {
+		if (m_worker.load()&&(m_worker.load()!=&worker)) {
 			::ThreadWorker* pWorker = m_worker.load();
 			m_worker.store(NULL);
 			delete pWorker;
 		}
+		if (m_worker.load() == &worker)return;
+		if (!worker.IsValid()) {
+			::ThreadWorker* pWorker = m_worker.load();
+			m_worker.store(NULL);
+			delete pWorker;
+			return;
+		}
+		
 		m_worker.store(new ::ThreadWorker(worker));
 	}
 	//true表示空闲，false表示已经分配了工作
 	bool IsIdle() {
+		if (m_worker.load()==NULL)return true;
 		return !m_worker.load()->IsValid();
 	}
 protected:
@@ -91,15 +100,21 @@ protected:
 private:
 	void ThreadWorker() {
 		while (m_bStatus) {
+			if (m_worker.load() == NULL) {
+				Sleep(1);
+				continue;
+			}
 			::ThreadWorker worker = *m_worker.load();
 			if (worker.IsValid()) {
-				int ret = worker();
-				if (ret) {
-					CString str;
-					str.Format(_T("thread found warning code %d\r\n"), ret);
-					OutputDebugString(str);
+				if (WaitForSingleObject(m_hThread, 0) == WAIT_TIMEOUT) {
+					int ret = worker();
+					if (ret) {
+						CString str;
+						str.Format(_T("thread found warning code %d\r\n"), ret);
+						OutputDebugString(str);
+					}
+					if (ret < 0)m_worker.store(NULL);
 				}
-				if (ret < 0)m_worker.store(NULL);
 			}
 			else Sleep(1);
 		}
@@ -122,6 +137,10 @@ public:
 	HuxlThreadPool() {}
 	~HuxlThreadPool() {
 		Stop();
+		for (size_t i = 0; i < m_threads.size(); i++) {
+			delete m_threads[i];
+			m_threads[i] = NULL;
+		}
 		m_threads.clear();
 	}
 	bool Invoke() {

@@ -2,6 +2,8 @@
 #include "pch.h"
 #include <atomic>
 #include <list>
+#include "HuxlThread.h"
+
 
 template<class T>
 class CEdoyunQueue
@@ -28,11 +30,11 @@ public:
 		EQSize,
 		EQClear
 	};
-private:
+protected:
 	std::list<T> m_lstData;
 	HANDLE m_hCompeletionPort;
 	HANDLE m_hThread;
-	volatile std::atomic_bool m_lock;//队列正在析构，担心post后还有人push或pop
+	std::atomic<bool> m_lock;//队列正在析构，担心post后还有人push或pop
 public:
 	CEdoyunQueue() {
 		m_lock = false;
@@ -42,7 +44,7 @@ public:
 			m_hThread = (HANDLE)_beginthread(&CEdoyunQueue<T>::threadEntry, 0, this);
 		}
 	};
-	~CEdoyunQueue() {
+	virtual ~CEdoyunQueue() {
 		if (m_lock)return;
 		m_lock = true;
 		PostQueuedCompletionStatus(m_hCompeletionPort, 0, NULL, NULL);
@@ -50,7 +52,7 @@ public:
 		if (m_hCompeletionPort) {
 			HANDLE hTemp = m_hCompeletionPort;
 			m_hCompeletionPort = NULL;
-			CloseHandle(hTemp);
+			//::CloseHandle(hTemp);
 		}
 	}
 	bool PushBack(const T& data) {
@@ -64,21 +66,21 @@ public:
 		//printf("push back done %d %08p\r\n", ret,(void*)pParam);
 		return ret;
 	}
-	bool PopFront(T& data) {
-		if (m_lock)return false;
-		HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-		IocpParam Param(EQPop, data, hEvent);
-		bool ret = PostQueuedCompletionStatus(m_hCompeletionPort, sizeof(PPARAM), (ULONG_PTR)&Param, NULL);
-		if (ret == false) {//与PostQueuedCompletionStatus间隙越小越好
-			CloseHandle(hEvent);
-			return false;
-		}
-		ret = WaitForSingleObject(hEvent, INFINITE) == WAIT_OBJECT_0;
-		if (ret) {
-			data = Param.Data;
-		}
-		return ret;
-	}
+	//virtual bool PopFront(T& data) {
+	//	if (m_lock)return false;
+	//	HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	//	IocpParam Param(EQPop, data, hEvent);
+	//	bool ret = PostQueuedCompletionStatus(m_hCompeletionPort, sizeof(PPARAM), (ULONG_PTR)&Param, NULL);
+	//	if (ret == false) {//与PostQueuedCompletionStatus间隙越小越好
+	//		CloseHandle(hEvent);
+	//		return false;
+	//	}
+	//	ret = WaitForSingleObject(hEvent, INFINITE) == WAIT_OBJECT_0;
+	//	if (ret) {
+	//		data = Param.Data;
+	//	}
+	//	return ret;
+	//}
 	size_t Size() {
 		HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 		IocpParam Param(EQSize, T(), hEvent);
@@ -105,13 +107,16 @@ public:
 		//printf("Clear %08p\r\n", (void*)pParam);
 		return ret;
 	}
-private:
+	
+
+protected:
 	static void threadEntry(void* arg) {
 		CEdoyunQueue<T>* thiz = (CEdoyunQueue<T>*)arg;
 		thiz->threadMain();
+		//TODO:函数没实现
 		_endthread();
 	}
-	void DealParam(PPARAM* pParam) {
+	virtual void DealParam(PPARAM* pParam) {
 		switch (pParam->nOperator) {
 		case EQPush:
 			m_lstData.push_back(pParam->Data);
@@ -121,6 +126,7 @@ private:
 		case EQPop:
 			if (m_lstData.size() > 0) {
 				pParam->Data = m_lstData.front();
+				//pParam->Data = std::move(m_lstData.front());
 				m_lstData.pop_front();
 			}
 			if (pParam->hEvent != NULL) SetEvent(pParam->hEvent);
@@ -139,7 +145,7 @@ private:
 			break;
 		}
 	}
-	void threadMain() {
+	virtual void threadMain() {
 		DWORD dwTransferred = 0;
 		PPARAM* pParam = NULL;
 		ULONG_PTR CompletionKey = 0;
@@ -163,10 +169,88 @@ private:
 			pParam = (PPARAM*)CompletionKey;
 			DealParam(pParam);
 		}
-		HANDLE hTemp = m_hCompeletionPort;
-		m_hCompeletionPort = NULL;
-		//51行析构函数内close过一次，为防止没调用析构函数，此处再close一次
-		CloseHandle(hTemp);
+		CloseHandle(m_hCompeletionPort);
 	}
 };
 
+
+template<class T>
+class HuxlSendQueue :public CEdoyunQueue<T>,public ThreadFuncBase
+{
+public:
+	HuxlSendQueue() = default;
+	typedef int (ThreadFuncBase::*HXLCALLBACK)(T& data);
+	HuxlSendQueue(ThreadFuncBase*obj, HXLCALLBACK callback)
+		:CEdoyunQueue<T>() ,m_base((ThreadFuncBase*)obj),m_callback(callback)
+	{
+		m_thread.Start();
+		m_thread.UpdateWorker(::ThreadWorker(this, (FUNCTYPE)&HuxlSendQueue<T>::threadTick));
+	}
+	virtual ~HuxlSendQueue(){
+		m_thread.Stop();
+		m_base = NULL;
+		m_callback = NULL;
+	}
+protected:
+	virtual bool PopFront(T& data) { return false; };
+	bool PopFront()
+	{
+		typename CEdoyunQueue<T>::IocpParam* Param=new typename CEdoyunQueue<T>::IocpParam(CEdoyunQueue<T>::EQPop, T());
+		if (CEdoyunQueue<T>::m_lock) {
+			delete Param;
+			return false;
+		}
+		bool ret = PostQueuedCompletionStatus(CEdoyunQueue<T>::m_hCompeletionPort, sizeof(*Param), (ULONG_PTR)&Param, NULL);
+		if (ret == false) {//与PostQueuedCompletionStatus间隙越小越好
+			delete Param;
+			return false;
+		}
+		return ret;
+	}
+
+	int threadTick() {
+		if (WaitForSingleObject(CEdoyunQueue<T>::m_hThread, 0) != WAIT_TIMEOUT)return 0;
+		if (CEdoyunQueue<T>::m_lstData.size() > 0)
+		{
+			PopFront();
+		}
+		return 0;
+	}
+
+	virtual void DealParam(typename CEdoyunQueue<T>::PPARAM* pParam) {
+		switch (pParam->nOperator) {
+		case CEdoyunQueue<T>::EQPush:
+			CEdoyunQueue<T>::m_lstData.push_back(pParam->Data);
+			delete pParam;
+			//printf("delete %08p\r\n", (void*)pParam);
+			break;
+		case CEdoyunQueue<T>::EQPop:
+			if (CEdoyunQueue<T>::m_lstData.size() > 0) {
+				pParam->Data = CEdoyunQueue<T>::m_lstData.front();
+				if((m_base->*m_callback)(pParam->Data)==0)
+				CEdoyunQueue<T>::m_lstData.pop_front();
+			}
+			if (pParam->hEvent != NULL) SetEvent(pParam->hEvent);
+			delete pParam;
+			break;
+		case CEdoyunQueue<T>::EQSize:
+			pParam->nOperator = CEdoyunQueue<T>::m_lstData.size();
+			if (pParam->hEvent != NULL) SetEvent(pParam->hEvent);
+			break;
+		case CEdoyunQueue<T>::EQClear:
+			CEdoyunQueue<T>::m_lstData.clear();
+			delete pParam;
+			//printf("delete %08p\r\n", (void*)pParam);
+			break;
+		default:
+			OutputDebugStringA("unknown operator!\r\n");
+			break;
+		}
+	}
+private:
+	ThreadFuncBase* m_base;
+	HXLCALLBACK m_callback;
+	HuxlThread m_thread;
+};
+
+typedef HuxlSendQueue< std::vector<char> >::HXLCALLBACK SENDCALLBACK;

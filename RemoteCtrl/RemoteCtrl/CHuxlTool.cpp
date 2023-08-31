@@ -95,6 +95,7 @@ bool CHuxlTool::Init()
 		wprintf(L"¥ÌŒÛ: MFC ≥ı ºªØ ß∞‹\n");
 		return false;
 	}
+	return true;
 }
 
 bool CHuxlTool::IsAdmin()
