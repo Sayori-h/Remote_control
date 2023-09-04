@@ -180,6 +180,7 @@ bool CClientSocket::initSocket(){
 	sockaddr_in serv_adr;
 	memset(&serv_adr, 0, sizeof(serv_adr));
 	serv_adr.sin_family = AF_INET;
+	TRACE("addr %08X nIP %08X\r\n", inet_addr("127.0.0.1"), m_nIP);
 	serv_adr.sin_addr.s_addr = htonl(m_nIP);
 	serv_adr.sin_port = htons(m_nPort);
 
@@ -193,7 +194,7 @@ bool CClientSocket::initSocket(){
 	if (ret == -1)
 	{
 		AfxMessageBox("连接失败!");
-		TRACE("连接失败 %d %s\r\n", err, GetErrInfo(WSAGetLastError()));
+		TRACE("连接失败 %d %s\r\n", err, GetErrInfo(WSAGetLastError()).c_str());
 		return false;
 	}
 	TRACE("socket init done!\r\n");

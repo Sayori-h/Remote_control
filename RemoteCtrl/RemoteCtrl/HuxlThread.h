@@ -11,7 +11,7 @@ typedef int (ThreadFuncBase::* FUNCTYPE)();
 class ThreadWorker {
 public:
 	ThreadWorker() :thiz(NULL), func(NULL) {};
-	ThreadWorker(ThreadFuncBase* obj, FUNCTYPE f) :thiz(obj), func(f) {}
+	ThreadWorker(void* obj, FUNCTYPE f) :thiz((ThreadFuncBase*)obj), func(f) {}
 	ThreadWorker(const ThreadWorker& worker) {
 		thiz = worker.thiz;
 		func = worker.func;
@@ -25,7 +25,8 @@ public:
 	};
 	int operator()() {
 		if (IsValid()) {
-			return (thiz->*func)();
+			int res = (thiz->*func)();
+			return res;
 		}
 		return -1;
 	}
@@ -113,7 +114,11 @@ private:
 						str.Format(_T("thread found warning code %d\r\n"), ret);
 						OutputDebugString(str);
 					}
-					if (ret < 0)m_worker.store(NULL);
+					if (ret < 0) {
+						::ThreadWorker* pWorker = m_worker.load();
+						m_worker.store(NULL);
+						delete pWorker;
+					}
 				}
 			}
 			else Sleep(1);
@@ -121,7 +126,7 @@ private:
 	}
 	static void ThreadEntry(void* arg) {
 		HuxlThread* thiz = (HuxlThread*)arg;
-		if (thiz)thiz->ThreadWorker();
+		if(thiz) thiz->ThreadWorker();
 		_endthread();
 	}
 };

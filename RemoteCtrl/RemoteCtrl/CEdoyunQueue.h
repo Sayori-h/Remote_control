@@ -209,7 +209,9 @@ protected:
 	}
 
 	int threadTick() {
-		if (WaitForSingleObject(CEdoyunQueue<T>::m_hThread, 0) != WAIT_TIMEOUT)return 0;
+		//WARN 
+		/*if (WaitForSingleObject(CEdoyunQueue<T>::m_hThread, 0) != WAIT_TIMEOUT)return 0;*/
+		if (WaitForSingleObject(CEdoyunQueue<T>::m_hThread, INFINITE)) return 0;
 		if (CEdoyunQueue<T>::m_lstData.size() > 0)
 		{
 			PopFront();
